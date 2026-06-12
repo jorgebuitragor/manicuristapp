@@ -1,15 +1,42 @@
 {
   "expo": {
-    "name": "manicuristapp",
+    "name": "ManicuristApp",
     "slug": "manicuristapp",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "scheme": "manicuristapp",
+    "orientation": "default",
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      "expo-web-browser",
+      "expo-localization",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Permitir el acceso a tu galería para guardar fotos.",
+          "savePhotosPermission": "Permitir guardar fotos en tu galería.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
+    ],
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jorgebuitragofcv.manicuristapp",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.665407645505-bgs49epshlgma9t45a1or4kl89elrhus"
+            ]
+          }
+        ]
+      }
     },
     "android": {
+      "package": "com.jorgebuitragofcv.manicuristapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

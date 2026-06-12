@@ -1,0 +1,82 @@
+import { useRef } from 'react';
+import { Animated, Platform, PanResponder, StyleSheet, View } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
+
+interface SwipeToDismissModalProps {
+  children: React.ReactNode;
+  onDismiss: () => void;
+}
+
+export function SwipeToDismissModal({ children, onDismiss }: SwipeToDismissModalProps) {
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      // Don't capture on start — let buttons and taps work normally
+      onStartShouldSetPanResponder: () => false,
+      // Claim gesture only when it's a clear downward swipe and no child claimed it
+      onMoveShouldSetPanResponder: (_, gs) =>
+        gs.dy > 8 && Math.abs(gs.dy) > Math.abs(gs.dx) * 1.5,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dy > 0) translateY.setValue(gs.dy);
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dy > 120 || gs.vy > 0.8) {
+          Animated.timing(translateY, {
+            toValue: 800,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(onDismiss);
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
+
+  if (Platform.OS !== 'android') return <>{children}</>;
+
+  return (
+    <Animated.View
+      style={[styles.container, { transform: [{ translateY }] }]}
+      {...panResponder.panHandlers}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+/** Visual drag-handle pill shown only on Android at the top of a modal screen. */
+export function ModalDragHandle() {
+  const { colors } = useTheme();
+  if (Platform.OS !== 'android') return null;
+  return (
+    <View style={styles.handleArea}>
+      <View style={[styles.pill, { backgroundColor: colors.border }]} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  handleArea: {
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pill: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+  },
+});

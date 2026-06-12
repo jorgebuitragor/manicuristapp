@@ -1,5 +1,25 @@
 {
   "enabledPlugins": {
     "expo@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pnpm start:*)",
+      "Bash(pnpm ios:*)",
+      "Bash(pnpm android:*)",
+      "Bash(pnpm web:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(npx expo:*)",
+      "Bash(npx supabase gen types:*)",
+      "Bash(find . -not -path '*/node_modules/*':*)",
+      "Bash(grep -r:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
   }
 }
