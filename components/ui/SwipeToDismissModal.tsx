@@ -1,13 +1,14 @@
 import { useRef } from 'react';
-import { Animated, Platform, PanResponder, StyleSheet, View } from 'react-native';
+import { Animated, Platform, PanResponder, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 
 interface SwipeToDismissModalProps {
   children: React.ReactNode;
   onDismiss: () => void;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
-export function SwipeToDismissModal({ children, onDismiss }: SwipeToDismissModalProps) {
+export function SwipeToDismissModal({ children, onDismiss, containerStyle }: SwipeToDismissModalProps) {
   const translateY = useRef(new Animated.Value(0)).current;
 
   const panResponder = useRef(
@@ -48,7 +49,7 @@ export function SwipeToDismissModal({ children, onDismiss }: SwipeToDismissModal
 
   return (
     <Animated.View
-      style={[styles.container, { transform: [{ translateY }] }]}
+      style={[styles.container, containerStyle, { transform: [{ translateY }] }]}
       {...panResponder.panHandlers}
     >
       {children}

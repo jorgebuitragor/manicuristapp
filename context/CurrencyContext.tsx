@@ -14,22 +14,27 @@ export const CURRENCIES: { symbol: CurrencySymbol; label: string }[] = [
   { symbol: 'PEN', label: 'PEN' },
 ];
 
+// Currencies where decimals don't apply (whole-number amounts)
+const NO_DECIMAL_CURRENCIES: CurrencySymbol[] = ['COP', 'CLP', 'ARS'];
+
 interface CurrencyContextValue {
   symbol: CurrencySymbol;
   setSymbol: (s: CurrencySymbol) => void;
   formatAmount: (amount: number) => string;
+  parseAmountInput: (input: string) => number;
 }
 
 const CurrencyContext = createContext<CurrencyContextValue>({
-  symbol: '€',
+  symbol: 'COP',
   setSymbol: () => {},
-  formatAmount: (n) => `${n.toFixed(2)} €`,
+  formatAmount: (n) => `${new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Math.round(n))} COP`,
+  parseAmountInput: (s) => parseFloat(s.replace(/[.,]/g, '')) || 0,
 });
 
 const STORAGE_KEY = '@app_currency';
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
-  const [symbol, setSymbolState] = useState<CurrencySymbol>('€');
+  const [symbol, setSymbolState] = useState<CurrencySymbol>('COP');
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -47,14 +52,26 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEY, s);
   }
 
-  function formatAmount(amount: number) {
+  function formatAmount(amount: number): string {
+    if (NO_DECIMAL_CURRENCIES.includes(symbol)) {
+      const formatted = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Math.round(amount));
+      return `${formatted} ${symbol}`;
+    }
     return `${amount.toFixed(2)} ${symbol}`;
+  }
+
+  function parseAmountInput(input: string): number {
+    if (NO_DECIMAL_CURRENCIES.includes(symbol)) {
+      // Dots and commas are thousands separators → strip both before parsing
+      return parseFloat(input.replace(/[.,]/g, '')) || 0;
+    }
+    return parseFloat(input.replace(',', '.')) || 0;
   }
 
   if (!ready) return null;
 
   return (
-    <CurrencyContext.Provider value={{ symbol, setSymbol, formatAmount }}>
+    <CurrencyContext.Provider value={{ symbol, setSymbol, formatAmount, parseAmountInput }}>
       {children}
     </CurrencyContext.Provider>
   );

@@ -42,6 +42,49 @@ function StatBar({ value, max, color }: { value: number; max: number; color: str
   );
 }
 
+const CHART_HEIGHT = 72;
+
+function IncomeChart({ data }: { data: { label: string; amount: number }[] }) {
+  const { colors } = useTheme();
+  const { formatAmount } = useCurrency();
+  const max = Math.max(...data.map((d) => d.amount), 1);
+  const hasAny = data.some((d) => d.amount > 0);
+
+  return (
+    <View style={styles.chart}>
+      <View style={{ flexDirection: 'row', height: CHART_HEIGHT, alignItems: 'flex-end', gap: 3 }}>
+        {data.map(({ label, amount }) => {
+          const fillH = amount > 0 ? Math.max(4, (amount / max) * CHART_HEIGHT) : 2;
+          return (
+            <View key={label} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: CHART_HEIGHT }}>
+              <View
+                style={{
+                  width: '100%',
+                  height: fillH,
+                  borderRadius: 3,
+                  backgroundColor: amount > 0 ? colors.primary : colors.border,
+                }}
+              />
+            </View>
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 3, marginTop: 4 }}>
+        {data.map(({ label }) => (
+          <ThemedText key={label} variant="caption" tone="tertiary" style={styles.chartLabel}>
+            {label}
+          </ThemedText>
+        ))}
+      </View>
+      {hasAny && (
+        <ThemedText variant="caption" tone="tertiary" style={styles.chartMax}>
+          {formatAmount(max)}
+        </ThemedText>
+      )}
+    </View>
+  );
+}
+
 function StatsSection({ period }: { period: StatsPeriod }) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -52,11 +95,19 @@ function StatsSection({ period }: { period: StatsPeriod }) {
   if (!stats) return null;
 
   const maxClientTotal = stats.topClients[0]?.total ?? 1;
+  const { chartData } = stats;
   const maxServiceCount = stats.topServices[0]?.count ?? 1;
 
   return (
     <ThemedSection>
       <ThemedText variant="sectionTitle">{t('incomes.stats.title')}</ThemedText>
+
+      {chartData && chartData.length > 0 && (
+        <>
+          <ThemedText variant="caption" tone="tertiary" style={styles.chartTitle}>{t('incomes.stats.evolution')}</ThemedText>
+          <IncomeChart data={chartData} />
+        </>
+      )}
 
       <View style={[styles.statsRow, { borderBottomColor: colors.border }]}>
         <View style={styles.statCell}>
@@ -257,6 +308,10 @@ const styles = StyleSheet.create({
   rankValue: { width: 64, textAlign: 'right', flexShrink: 0 },
   barTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(128,128,128,0.12)', overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 3 },
+  chart: { marginTop: 4, marginBottom: 16 },
+  chartTitle: { textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8, fontSize: 11 },
+  chartLabel: { flex: 1, textAlign: 'center', fontSize: 10 },
+  chartMax: { fontSize: 10, textAlign: 'right', marginTop: 2 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 16 },
   row: {

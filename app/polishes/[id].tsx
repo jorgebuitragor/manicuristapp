@@ -55,7 +55,7 @@ export default function PolishDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loader, { backgroundColor: colors.background }]}>
+      <View style={[styles.loader, { backgroundColor: colors.background }]}> 
         <ActivityIndicator color={colors.primary} />
       </View>
     );
@@ -115,7 +115,7 @@ export default function PolishDetailScreen() {
         {polish.photo_url ? (
           <Image source={{ uri: polish.photo_url }} style={styles.hero} resizeMode="cover" />
         ) : (
-          <View style={[styles.hero, styles.heroPlaceholder, { backgroundColor: polish.hex_color ?? colors.primaryMuted }]}>
+          <View style={[styles.hero, styles.heroPlaceholder, { backgroundColor: polish.hex_color ?? colors.primaryMuted }]}> 
             {polish.hex_color ? (
               <View style={styles.heroNail}>
                 <View style={styles.heroNailShine} />

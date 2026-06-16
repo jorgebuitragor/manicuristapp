@@ -1,38 +1,46 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useOrganization } from '@/context/OrganizationContext';
 import type { NailRack } from '@/types/database.types';
 
 export const NAIL_RACKS_KEY = ['nail-racks'] as const;
 
 export function useNailRacks() {
+  const { organizationId } = useOrganization();
   return useQuery({
-    queryKey: NAIL_RACKS_KEY,
+    queryKey: [...NAIL_RACKS_KEY, organizationId],
     queryFn: async () => {
+      if (!organizationId) return [];
       const { data, error } = await supabase
         .from('nail_racks')
         .select('*')
+        .eq('organization_id', organizationId)
         .order('name');
       if (error) throw error;
       return data as NailRack[];
     },
+    enabled: !!organizationId,
   });
 }
 
 export function useCreateNailRack() {
   const queryClient = useQueryClient();
+  const { organizationId } = useOrganization();
   return useMutation({
     mutationFn: async ({ name, max_capacity }: { name: string; max_capacity?: number | null }) => {
+      if (!organizationId) throw new Error('No organization');
       const trimmed = name.trim();
       const { data: existing, error: selectError } = await supabase
         .from('nail_racks')
         .select('*')
+        .eq('organization_id', organizationId)
         .ilike('name', trimmed)
         .maybeSingle();
       if (selectError) throw selectError;
       if (existing) return existing as NailRack;
       const { data, error } = await supabase
         .from('nail_racks')
-        .insert({ name: trimmed, max_capacity: max_capacity ?? null })
+        .insert({ name: trimmed, max_capacity: max_capacity ?? null, organization_id: organizationId })
         .select('*')
         .single();
       if (error) throw error;

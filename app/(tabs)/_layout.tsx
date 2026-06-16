@@ -1,8 +1,7 @@
-import { useWindowDimensions, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { useWindowDimensions, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Tabs, useRouter, usePathname } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TabletQuickActionFab } from '@/components/ui/TabletQuickActionFab';
 import { useTheme } from '@/context/ThemeContext';
@@ -56,10 +55,11 @@ function TabletSidebar() {
       edges={['left', 'top', 'bottom']}
     >
       <View style={styles.sidebarHeader}>
-        <View style={[styles.logoCircle, { backgroundColor: colors.primaryMuted }]}>
-          <Ionicons name="color-palette" size={22} color={colors.primary} />
+        <Image source={require('@/assets/manicuristapp-icon.png')} style={styles.sidebarLogo} />
+        <View style={styles.sidebarAppName}>
+          <ThemedText variant="title" style={styles.sidebarTitle}>Manicurist</ThemedText>
+          <ThemedText variant="title" style={[styles.sidebarTitle, { color: colors.primary }]}>App</ThemedText>
         </View>
-        <ThemedText style={styles.sidebarTitle}>{t('sidebar.title')}</ThemedText>
       </View>
 
       <View style={styles.sidebarNav}>
@@ -95,13 +95,6 @@ function TabletSidebar() {
         })}
       </View>
 
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={() => supabase.auth.signOut()}
-      >
-        <Ionicons name="log-out-outline" size={18} color={colors.textTertiary} />
-        <ThemedText tone="tertiary" style={styles.logoutText}>{t('sidebar.logout')}</ThemedText>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -114,10 +107,14 @@ export default function TabsLayout() {
   const isLandscape = width > height;
   const { colors } = useTheme();
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
+  const tabBarPaddingBottom = isTablet ? Math.max(4, insets.bottom) + 12 : 4;
   const fab = resolveTabletFab(pathname);
-  const showTabletFab = isTablet && isLandscape && fab;
+  const showTabletFab = isTablet && fab;
+  const TAB_BAR_HEIGHT = 80;
+  const fabBottomPortrait = TAB_BAR_HEIGHT + tabBarPaddingBottom + 16;
 
-  if (isTablet) {
+  if (isTablet && isLandscape) {
     return (
       <View style={[styles.tabletContainer, { backgroundColor: colors.background }]}>
         <TabletSidebar />
@@ -154,6 +151,7 @@ export default function TabsLayout() {
   }
 
   return (
+    <View style={[styles.tabletContent, { backgroundColor: colors.background }]}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -165,10 +163,11 @@ export default function TabsLayout() {
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border,
           backgroundColor: colors.tabBar,
-          paddingBottom: 4,
+          paddingBottom: tabBarPaddingBottom,
+          ...(isTablet && { height: 80, paddingTop: 10 }),
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: isTablet ? 13 : 11,
           fontWeight: '500',
         },
       }}
@@ -178,7 +177,7 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.today'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={isTablet ? 24 : 22} color={color} />
           ),
         }}
       />
@@ -187,7 +186,7 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.calendar'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={isTablet ? 24 : 22} color={color} />
           ),
         }}
       />
@@ -196,7 +195,7 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.clients'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'people' : 'people-outline'} size={isTablet ? 24 : 22} color={color} />
           ),
         }}
       />
@@ -210,7 +209,7 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.polishes'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'color-palette' : 'color-palette-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'color-palette' : 'color-palette-outline'} size={isTablet ? 24 : 22} color={color} />
           ),
         }}
       />
@@ -219,7 +218,7 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.incomes'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'cash' : 'cash-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'cash' : 'cash-outline'} size={isTablet ? 24 : 22} color={color} />
           ),
         }}
       />
@@ -228,11 +227,19 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.settings'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={isTablet ? 24 : 22} color={color} />
           ),
         }}
       />
     </Tabs>
+    {showTabletFab ? (
+      <TabletQuickActionFab
+        label={t(fab!.labelKey)}
+        onPress={() => router.push(fab!.route as any)}
+        style={{ bottom: fabBottomPortrait }}
+      />
+    ) : null}
+    </View>
   );
 }
 
@@ -259,12 +266,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     marginBottom: 8,
   },
-  logoCircle: {
+  sidebarLogo: {
     width: 38,
     height: 38,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  },
+  sidebarAppName: {
+    flexDirection: 'row',
   },
   sidebarTitle: {
     fontSize: 17,

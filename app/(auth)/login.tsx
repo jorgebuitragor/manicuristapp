@@ -1,24 +1,24 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
+  Image,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedInput } from '@/components/ui/ThemedInput';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
-import { useToast } from '@/context/ToastContext';
+import { useError } from '@/context/ErrorContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -29,11 +29,13 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { showToast } = useToast();
+  const { showError } = useError();
+
+  const passwordRef = useRef<TextInput>(null);
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
-      showToast('Introduce tu email y contraseña.', 'error');
+      showError(t('auth.error.fillFields'));
       return;
     }
 
@@ -41,88 +43,85 @@ export default function LoginScreen() {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
 
-    if (error) {
-      showToast(error.message, 'error');
-    }
+    if (error) showError(error.message);
   }
 
   async function handleGoogleLogin() {
     setGoogleLoading(true);
     try {
-      const redirectTo = makeRedirectUri();
+      const redirectTo = 'manicuristapp://auth-callback';
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo,
-          skipBrowserRedirect: true,
-        },
+        options: { redirectTo, skipBrowserRedirect: true },
       });
 
       if (error || !data.url) {
-        showToast(error?.message ?? 'No se pudo iniciar sesión con Google.', 'error');
+        showError(error?.message ?? t('auth.error.googleFailed'));
         return;
       }
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-
-      if (result.type === 'success' && result.url) {
-        const { params, errorCode } = QueryParams.getQueryParams(result.url);
-        if (errorCode) {
-          showToast(errorCode, 'error');
-          return;
-        }
-        const { access_token, refresh_token } = params;
-        if (access_token) {
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-          if (sessionError) showToast(sessionError.message, 'error');
-        }
-      }
-    } catch (e) {
-      showToast('Ocurrió un error al iniciar sesión con Google.', 'error');
+      // Abre el browser sin interceptar — el deep link handler en _layout.tsx
+      // procesa los tokens cuando Supabase redirige de vuelta a exp://...
+      await WebBrowser.openBrowserAsync(data.url);
+    } catch {
+      showError(t('auth.error.googleError'));
     } finally {
       setGoogleLoading(false);
     }
   }
 
+  const isLoading = loading || googleLoading;
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="padding"
     >
-      <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}> 
-        <View style={[styles.logoCircle, { backgroundColor: colors.primaryMuted }]}>
-          <Ionicons name="color-palette" size={32} color={colors.primary} />
+      <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}>
+        <Image
+          source={require('@/assets/manicuristapp-icon.png')}
+          style={styles.logo}
+        />
+        <View style={styles.appName}>
+          <ThemedText variant="title" style={styles.title}>Manicurist</ThemedText>
+          <ThemedText variant="title" style={[styles.title, { color: colors.primary }]}>App</ThemedText>
         </View>
-        <ThemedText variant="title" style={styles.title}>{t('auth.appName')}</ThemedText>
         <ThemedText tone="secondary" style={styles.subtitle}>{t('auth.login.subtitle')}</ThemedText>
 
         <ThemedInput
-          style={styles.input}
+          style={styles.field}
           placeholder={t('auth.email')}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
           keyboardType="email-address"
           autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          submitBehavior="submit"
+          editable={!isLoading}
         />
 
-        <ThemedInput
-          style={styles.input}
+        <PasswordInput
+          ref={passwordRef}
+          style={styles.field}
           placeholder={t('auth.password')}
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
           autoComplete="password"
+          textContentType="password"
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
+          editable={!isLoading}
         />
 
         <ThemedButton
-          label={t('auth.login.button')}
+          label={loading ? t('common.loading') : t('auth.login.button')}
           onPress={handleLogin}
-          disabled={loading || googleLoading}
+          disabled={isLoading}
           style={styles.button}
         />
 
@@ -133,15 +132,20 @@ export default function LoginScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.googleButton, { borderColor: colors.border, backgroundColor: colors.card }, googleLoading && styles.buttonDisabled]}
+          style={[
+            styles.googleButton,
+            { borderColor: colors.border, backgroundColor: colors.card },
+            isLoading && styles.disabled,
+          ]}
           onPress={handleGoogleLogin}
-          disabled={loading || googleLoading}
+          disabled={isLoading}
+          activeOpacity={0.7}
         >
           {googleLoading ? (
             <ActivityIndicator color={colors.textSecondary} />
           ) : (
             <>
-              <ThemedText style={[styles.googleIcon, { color: colors.primary }]}>G</ThemedText>
+              <Ionicons name="logo-google" size={18} color="#4285F4" />
               <ThemedText style={styles.googleButtonText}>{t('auth.continueWithGoogle')}</ThemedText>
             </>
           )}
@@ -173,38 +177,29 @@ const styles = StyleSheet.create({
     elevation: 4,
     alignItems: 'center',
   },
-  logoCircle: {
+  logo: {
     width: 72,
     height: 72,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 16,
     marginBottom: 12,
   },
-  title: { marginBottom: 4 },
+  appName: { flexDirection: 'row', marginBottom: 4 },
+  title: {},
   subtitle: { marginBottom: 32 },
-  input: {
+  field: {
     width: '100%',
     marginBottom: 12,
   },
   button: { width: '100%', marginTop: 8 },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+  disabled: { opacity: 0.6 },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
     marginVertical: 20,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 14,
-  },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { marginHorizontal: 12, fontSize: 14 },
   googleButton: {
     width: '100%',
     flexDirection: 'row',
@@ -215,13 +210,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 10,
   },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
   googleButtonText: { fontSize: 16, fontWeight: '600' },
-  registerLink: {
-    marginTop: 20,
-  },
+  registerLink: { marginTop: 20 },
   registerLinkText: { fontSize: 14, fontWeight: '600' },
 });

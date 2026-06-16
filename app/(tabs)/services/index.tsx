@@ -17,6 +17,7 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
 import { useConfirm } from '@/context/ConfirmContext';
+import { useError } from '@/context/ErrorContext';
 import type { Service } from '@/types/database.types';
 
 function FieldLabel({ label, required, hint }: { label: string; required?: boolean; hint?: string }) {
@@ -64,9 +65,10 @@ function ServiceModal({
   const durationRef = useRef<TextInput>(null);
   const priceRef = useRef<TextInput>(null);
   const { colors } = useTheme();
-  const { symbol } = useCurrency();
+  const { symbol, parseAmountInput } = useCurrency();
   const { t } = useI18n();
   const { showToast } = useToast();
+  const { showError } = useError();
   const isEditing = Boolean(service);
 
   useEffect(() => {
@@ -79,14 +81,14 @@ function ServiceModal({
 
   async function handleSave() {
     if (!name.trim()) {
-      showToast(t('services.error.nameRequired'), 'error');
+      showError(t('services.error.nameRequired'));
       return;
     }
-    const parsedPrice = parseFloat(price.replace(',', '.'));
+    const parsedPrice = parseAmountInput(price);
     const payload = {
       name: name.trim(),
       duration: parseInt(duration, 10) || 60,
-      price: price.trim() ? (isNaN(parsedPrice) ? null : parsedPrice) : null,
+      price: price.trim() ? (parsedPrice || null) : null,
       photo_url: photoUrl,
     };
 
@@ -270,7 +272,7 @@ export default function ServicesScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenHeader
         leadingIcon="arrow-back"
-        onLeadingPress={() => router.back()}
+        onLeadingPress={() => router.navigate('/(tabs)/settings')}
         title={t('services.title')}
         trailingLabel={t('services.new')}
         onTrailingPress={() => setShowAdd(true)}

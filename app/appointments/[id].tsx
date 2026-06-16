@@ -1,6 +1,6 @@
 import {
   View, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Share,
+  ActivityIndicator, Share, Linking,
 } from 'react-native';
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,6 +19,8 @@ import { useI18n } from '@/context/I18nContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useToast } from '@/context/ToastContext';
 import { useConfirm } from '@/context/ConfirmContext';
+import { useError } from '@/context/ErrorContext';
+import { useOrganization } from '@/context/OrganizationContext';
 import {
   useAppointment,
   useUpdateAppointmentStatus,
@@ -26,9 +28,14 @@ import {
   useRescheduleAppointment,
   useAddPolishToAppointment,
   useRemovePolishFromAppointment,
+  useAddServiceToAppointment,
+  useRemoveServiceFromAppointment,
   findConflictingAppointments,
 } from '@/hooks/useAppointments';
+import { useServices } from '@/hooks/useServices';
 import { syncAppointmentToCalendar, deleteAppointmentFromCalendar } from '@/hooks/useGoogleCalendar';
+import { useNotificationSettings } from '@/context/NotificationContext';
+import { scheduleAppointmentReminder, cancelAppointmentReminder } from '@/lib/notifications';
 import { usePolishes } from '@/hooks/usePolishes';
 import {
   canTransitionTo,
@@ -120,16 +127,23 @@ export default function AppointmentDetailScreen() {
   const reschedule = useRescheduleAppointment();
   const addPolish = useAddPolishToAppointment();
   const removePolish = useRemovePolishFromAppointment();
+  const addService = useAddServiceToAppointment();
+  const removeService = useRemoveServiceFromAppointment();
   const { data: allPolishes = [] } = usePolishes();
+  const { data: allServices = [] } = useServices();
   const [polishPickerValue, setPolishPickerValue] = useState('');
+  const [servicePickerValue, setServicePickerValue] = useState('');
   const { colors } = useTheme();
   const { t } = useI18n();
   const { is24Hour } = useTimeFormat();
   const { showToast } = useToast();
+  const { showError } = useError();
   const { showConfirm } = useConfirm();
+  const { reminderEnabled, reminderMinutes } = useNotificationSettings();
+  const { organizationId } = useOrganization();
 
   const updateIncome = useUpdateIncome();
-  const { symbol } = useCurrency();
+  const { symbol, formatAmount, parseAmountInput } = useCurrency();
 
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [rescheduleStart, setRescheduleStart] = useState<Date | null>(null);
@@ -151,7 +165,7 @@ export default function AppointmentDetailScreen() {
   }
 
   async function handleIncomeSave() {
-    const parsed = parseFloat(incomeAmount.replace(',', '.'));
+    const parsed = parseAmountInput(incomeAmount);
     if (isNaN(parsed) || parsed <= 0) return;
     if (existingIncome) {
       await updateIncome.mutateAsync({ id: existingIncome.id, amount: parsed, notes: incomeNotes.trim() || null });
@@ -193,18 +207,19 @@ export default function AppointmentDetailScreen() {
   async function handleReschedule() {
     if (!rescheduleStart || !rescheduleEnd) return;
     if (rescheduleEnd <= rescheduleStart) {
-      showToast(t('appointment.error.timeConflict'), 'error');
+      showError(t('appointment.error.timeConflict'));
       return;
     }
     const conflicts = await findConflictingAppointments(
       rescheduleStart.toISOString(),
       rescheduleEnd.toISOString(),
+      organizationId!,
       id
     );
     if (conflicts.length > 0) {
       const names = conflicts.map((c) => c.client?.name ?? '?').join(', ');
       const time = `${formatTimeLocal(new Date(conflicts[0].start_time), is24Hour)} – ${formatTimeLocal(new Date(conflicts[0].end_time), is24Hour)}`;
-      showToast(t('appointment.error.conflict.message').replace('{client}', names).replace('{time}', time), 'error');
+      showError(t('appointment.error.conflict.title'), t('appointment.error.conflict.message').replace('{client}', names).replace('{time}', time));
       return;
     }
     await reschedule.mutateAsync({
@@ -212,6 +227,18 @@ export default function AppointmentDetailScreen() {
       start_time: rescheduleStart.toISOString(),
       end_time: rescheduleEnd.toISOString(),
     });
+
+    // Reschedule appointment reminder
+    if (appointment && reminderEnabled) {
+      cancelAppointmentReminder(id);
+      scheduleAppointmentReminder(
+        id,
+        rescheduleStart.toISOString(),
+        appointment.client?.name ?? '',
+        appointment.services.map((s) => s.name),
+        reminderMinutes,
+      );
+    }
 
     // Fire-and-forget Google Calendar sync
     if (appointment) {
@@ -237,7 +264,7 @@ export default function AppointmentDetailScreen() {
       const msg = reason === 'futureAppointment'
         ? t('appointment.error.futureAppointment')
         : t('appointment.error.invalidTransition');
-      showToast(msg, 'error');
+      showError(msg);
       return;
     }
     updateStatus.mutate(
@@ -274,6 +301,29 @@ export default function AppointmentDetailScreen() {
     refetch();
   }
 
+  async function handleWhatsApp() {
+    if (!appointment) return;
+    const phone = appointment.client?.phone;
+    if (!phone) {
+      showError(t('appointment.whatsapp.noPhone'));
+      return;
+    }
+    const dateStr = formatDateTime(appointment.start_time, is24Hour);
+    const endStr = formatTime(appointment.end_time, is24Hour);
+    const message = t('appointment.whatsapp.message')
+      .replace('{name}', appointment.client?.name ?? '')
+      .replace('{date}', dateStr)
+      .replace('{end}', endStr);
+    const cleanPhone = phone.replace(/[^\d+]/g, '');
+    const url = `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    } else {
+      showError(t('appointment.whatsapp.notInstalled'));
+    }
+  }
+
   async function handleShare() {
     if (!appointment) return;
     const dateStr = formatDateTime(appointment.start_time, is24Hour);
@@ -302,6 +352,7 @@ export default function AppointmentDetailScreen() {
       variant: 'danger',
       onConfirm: async () => {
         const googleEventId = appointment?.google_event_id;
+        cancelAppointmentReminder(id);
         await deleteAppointment.mutateAsync(id);
         if (googleEventId) deleteAppointmentFromCalendar(googleEventId);
         showToast(t('appointment.toast.deleted'));
@@ -358,9 +409,16 @@ export default function AppointmentDetailScreen() {
                   {t(`status.${appointment.status}`)}
                 </ThemedText>
               </ThemedView>
-              <TouchableOpacity onPress={handleShare} hitSlop={8}>
-                <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
+              <View style={styles.cardActions}>
+                {appointment.client?.phone ? (
+                  <TouchableOpacity onPress={handleWhatsApp} hitSlop={8}>
+                    <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity onPress={handleShare} hitSlop={8}>
+                  <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
           {appointment.notes ? (
@@ -374,7 +432,7 @@ export default function AppointmentDetailScreen() {
             style={styles.rescheduleHeader}
             onPress={
               !canReschedule(appointment.status)
-                ? () => showToast(t('appointment.reschedule.notPending'), 'error')
+                ? () => showError(t('appointment.reschedule.notPending'))
                 : rescheduleOpen ? cancelReschedule : openReschedule
             }
             activeOpacity={0.7}
@@ -465,6 +523,43 @@ export default function AppointmentDetailScreen() {
         </ThemedSection>
 
         <ThemedSection>
+          <ThemedText variant="sectionTitle">{t('appointment.services')}</ThemedText>
+          <ThemedDropdown
+            label=""
+            value={servicePickerValue}
+            options={allServices
+              .filter((s) => !appointment.services.some((as) => as.id === s.id))
+              .map((s) => ({ value: s.id, label: s.name }))}
+            onChange={(sid: string) => {
+              setServicePickerValue(sid);
+              addService.mutate({ appointment_id: id, service_id: sid });
+            }}
+            placeholder={t('appointment.services.add')}
+          />
+          {appointment.services.length > 0 ? (
+            <View style={styles.polishPillsRow}>
+              {appointment.services.map((s) => {
+                const remaining = appointment.services.find((x) => x.id !== s.id)?.id ?? null;
+                return (
+                  <View key={s.id} style={[styles.polishPill, { borderColor: colors.border, backgroundColor: colors.inputBackground }]}>
+                    <Ionicons name="hand-left-outline" size={12} color={colors.primary} />
+                    <ThemedText variant="caption" style={styles.polishPillText} numberOfLines={1}>{s.name}</ThemedText>
+                    <TouchableOpacity
+                      onPress={() => removeService.mutate({ appointment_id: id, service_id: s.id, remaining_service_id: remaining })}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="close" size={14} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <ThemedText tone="tertiary" style={styles.photoLockedHint}>{t('appointment.services.empty')}</ThemedText>
+          )}
+        </ThemedSection>
+
+        <ThemedSection>
           <ThemedText variant="sectionTitle">{t('appointment.usedPolishes')}</ThemedText>
           <ThemedDropdown
             label=""
@@ -512,7 +607,7 @@ export default function AppointmentDetailScreen() {
               <View style={styles.incomeHeaderRight}>
                 {existingIncome && !incomeEditOpen && (
                   <ThemedText tone="primary" style={styles.incomeAmount}>
-                    {existingIncome.amount.toFixed(2)} {symbol}
+                    {formatAmount(existingIncome.amount)}
                   </ThemedText>
                 )}
                 <Ionicons
@@ -657,4 +752,5 @@ const styles = StyleSheet.create({
   polishDot: { width: 12, height: 12, borderRadius: 6 },
   polishPillText: { maxWidth: 140 },
   cardTrailing: { alignItems: 'flex-end', gap: 8 },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
 });

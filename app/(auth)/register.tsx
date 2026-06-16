@@ -1,20 +1,21 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
+  TextInput,
 } from 'react-native';
-import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedInput } from '@/components/ui/ThemedInput';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
+import { useError } from '@/context/ErrorContext';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -22,20 +23,24 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { colors } = useTheme();
+
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
   const { t } = useI18n();
   const { showToast } = useToast();
+  const { showError } = useError();
 
   async function handleRegister() {
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      showToast('Rellena todos los campos.', 'error');
+      showError('Rellena todos los campos.');
       return;
     }
     if (password !== confirmPassword) {
-      showToast('Las contraseñas no coinciden.', 'error');
+      showError('Las contraseñas no coinciden.');
       return;
     }
     if (password.length < 6) {
-      showToast('La contraseña debe tener al menos 6 caracteres.', 'error');
+      showError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
 
@@ -47,7 +52,7 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (error) {
-      showToast(error.message, 'error');
+      showError(error.message);
     } else if (data.session) {
       // Email confirmation disabled — session created immediately, navigate to app
       // (expo-router will redirect automatically via the auth listener)
@@ -61,11 +66,11 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="padding"
     >
       <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}> 
         <View style={[styles.logoCircle, { backgroundColor: colors.primaryMuted }]}>
-          <Ionicons name="color-palette" size={32} color={colors.primary} />
+          <Ionicons name="person-add-outline" size={32} color={colors.primary} />
         </View>
         <ThemedText variant="title" style={styles.title}>{t('auth.register.title')}</ThemedText>
         <ThemedText tone="secondary" style={styles.subtitle}>{t('auth.register.subtitle')}</ThemedText>
@@ -80,22 +85,31 @@ export default function RegisterScreen() {
           autoComplete="email"
         />
 
-        <ThemedInput
+        <PasswordInput
+          ref={passwordRef}
           style={styles.input}
           placeholder={t('auth.password')}
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
           autoComplete="new-password"
+          textContentType="newPassword"
+          returnKeyType="next"
+          onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+          submitBehavior="submit"
+          editable={!loading}
         />
 
-        <ThemedInput
+        <PasswordInput
+          ref={confirmPasswordRef}
           style={styles.input}
           placeholder={t('auth.confirmPassword')}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          secureTextEntry
           autoComplete="new-password"
+          textContentType="newPassword"
+          returnKeyType="done"
+          onSubmitEditing={handleRegister}
+          editable={!loading}
         />
 
         <ThemedButton

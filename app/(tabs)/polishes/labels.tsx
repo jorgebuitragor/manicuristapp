@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
+import { useError } from '@/context/ErrorContext';
 import {
   usePolishLabels,
   labelToKey,
@@ -28,18 +29,19 @@ function AddRow({
   const { colors } = useTheme();
   const { t } = useI18n();
   const { showToast } = useToast();
+  const { showError } = useError();
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function handleConfirm() {
     const trimmed = text.trim();
     if (!trimmed) {
-      showToast(t('polishLabels.empty'), 'error');
+      showError(t('polishLabels.empty'));
       return;
     }
     const key = labelToKey(trimmed) || `custom_${Date.now()}`;
     if (existingKeys.includes(key)) {
-      showToast(t('polishLabels.duplicate'), 'error');
+      showError(t('polishLabels.duplicate'));
       return;
     }
     setSaving(true);
@@ -152,6 +154,7 @@ export default function PolishLabelsScreen() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const { showToast } = useToast();
+  const { showError } = useError();
   const {
     baseColors, toneFamilies, isLoading,
     addBaseColor, removeBaseColor,
@@ -160,7 +163,7 @@ export default function PolishLabelsScreen() {
 
   async function handleRemoveBaseColor(id: string) {
     if (BUILT_IN_BASE_KEYS.includes(baseColors.find((c) => c.id === id)?.key ?? '')) {
-      showToast(t('polishLabels.cannotDeleteBuiltIn'), 'error');
+      showError(t('polishLabels.cannotDeleteBuiltIn'));
       return;
     }
     try {
@@ -173,7 +176,7 @@ export default function PolishLabelsScreen() {
 
   async function handleRemoveToneFamily(id: string) {
     if (BUILT_IN_TONE_KEYS.includes(toneFamilies.find((c) => c.id === id)?.key ?? '')) {
-      showToast(t('polishLabels.cannotDeleteBuiltIn'), 'error');
+      showError(t('polishLabels.cannotDeleteBuiltIn'));
       return;
     }
     try {
@@ -204,7 +207,7 @@ export default function PolishLabelsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenHeader
         leadingIcon="chevron-back"
-        onLeadingPress={() => router.back()}
+        onLeadingPress={() => router.navigate('/(tabs)/settings')}
         title={t('polishLabels.title')}
       />
       {isLoading ? (

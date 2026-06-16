@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useOrganization } from '@/context/OrganizationContext';
 import type { Income, TablesInsert } from '@/types/database.types';
 
 export const INCOMES_KEY = ['incomes'] as const;
@@ -24,17 +25,21 @@ export type IncomeWithRelations = Income & {
 };
 
 export function useIncomes() {
+  const { organizationId } = useOrganization();
   return useQuery({
-    queryKey: INCOMES_KEY,
+    queryKey: [...INCOMES_KEY, organizationId],
     queryFn: async () => {
+      if (!organizationId) return [];
       const { data, error } = await supabase
         .from('incomes')
         .select(INCOME_WITH_RELATIONS)
+        .eq('organization_id', organizationId)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as IncomeWithRelations[];
     },
+    enabled: !!organizationId,
   });
 }
 
@@ -56,11 +61,12 @@ export function useIncomeByAppointment(appointmentId: string | null | undefined)
 
 export function useCreateIncome() {
   const qc = useQueryClient();
+  const { organizationId } = useOrganization();
   return useMutation({
-    mutationFn: async (payload: TablesInsert<'incomes'>) => {
+    mutationFn: async (payload: Omit<TablesInsert<'incomes'>, 'organization_id'>) => {
       const { data, error } = await supabase
         .from('incomes')
-        .insert(payload)
+        .insert({ ...payload, organization_id: organizationId })
         .select()
         .single();
       if (error) throw error;
@@ -95,8 +101,9 @@ export function useDeleteIncome() {
 export type StatsPeriod = 'week' | 'month' | 'year' | 'all';
 
 export function useIncomeStats(period: StatsPeriod) {
+  const { organizationId } = useOrganization();
   return useQuery({
-    queryKey: [...INCOMES_KEY, 'stats', period],
+    queryKey: [...INCOMES_KEY, 'stats', period, organizationId],
     queryFn: async () => {
       const now = new Date();
       let fromDate: string | null = null;
@@ -114,6 +121,7 @@ export function useIncomeStats(period: StatsPeriod) {
       let query = supabase
         .from('incomes')
         .select(INCOME_WITH_RELATIONS)
+        .eq('organization_id', organizationId!)
         .order('date', { ascending: false });
       if (fromDate) query = query.gte('date', fromDate);
 
@@ -149,14 +157,61 @@ export function useIncomeStats(period: StatsPeriod) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      return { total, count, avg, topClients, topServices };
+      type ChartBar = { label: string; amount: number };
+      let chartData: ChartBar[] = [];
+
+      if (period === 'week' && fromDate) {
+        const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        chartData = labels.map((label, i) => {
+          const d = new Date(`${fromDate}T12:00:00`);
+          d.setDate(d.getDate() + i);
+          const dateStr = d.toISOString().slice(0, 10);
+          const amount = rows.filter((r) => r.date === dateStr).reduce((s, r) => s + Number(r.amount), 0);
+          return { label, amount };
+        });
+      } else if (period === 'month' && fromDate) {
+        const weekAmounts: Record<number, number> = {};
+        for (const row of rows) {
+          const day = parseInt(row.date.slice(8), 10);
+          const weekIdx = Math.min(3, Math.floor((day - 1) / 7));
+          weekAmounts[weekIdx] = (weekAmounts[weekIdx] ?? 0) + Number(row.amount);
+        }
+        chartData = [0, 1, 2, 3].map((i) => ({ label: `S${i + 1}`, amount: weekAmounts[i] ?? 0 }));
+      } else if (period === 'year') {
+        const labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthAmounts = new Array(12).fill(0);
+        for (const row of rows) {
+          const month = new Date(`${row.date}T12:00:00`).getMonth();
+          monthAmounts[month] += Number(row.amount);
+        }
+        chartData = labels.map((label, i) => ({ label, amount: monthAmounts[i] }));
+      } else {
+        const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthMap: Record<string, number> = {};
+        for (const row of rows) {
+          const d = new Date(`${row.date}T12:00:00`);
+          const key = `${d.getFullYear()}-${d.getMonth()}`;
+          monthMap[key] = (monthMap[key] ?? 0) + Number(row.amount);
+        }
+        const nowAll = new Date();
+        chartData = Array.from({ length: 12 }, (_, i) => {
+          const d = new Date(nowAll);
+          d.setMonth(d.getMonth() - (11 - i));
+          const key = `${d.getFullYear()}-${d.getMonth()}`;
+          return { label: monthLabels[d.getMonth()], amount: monthMap[key] ?? 0 };
+        });
+      }
+
+      return { total, count, avg, topClients, topServices, chartData };
     },
+    enabled: !!organizationId,
   });
 }
 
 export function useIncomeSummary() {
+  const { organizationId } = useOrganization();
   return useQuery({
-    queryKey: [...INCOMES_KEY, 'summary'],
+    queryKey: [...INCOMES_KEY, 'summary', organizationId],
     queryFn: async () => {
       const now = new Date();
       const todayStr = now.toISOString().slice(0, 10);
@@ -170,6 +225,7 @@ export function useIncomeSummary() {
       const { data, error } = await supabase
         .from('incomes')
         .select('amount, date')
+        .eq('organization_id', organizationId!)
         .gte('date', monthStartStr);
       if (error) throw error;
 
@@ -188,5 +244,6 @@ export function useIncomeSummary() {
 
       return { today, week, month };
     },
+    enabled: !!organizationId,
   });
 }

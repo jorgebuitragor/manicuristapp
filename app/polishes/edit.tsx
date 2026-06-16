@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/context/ThemeContext';
 import { usePolish } from '@/hooks/usePolishes';
 import { PolishFormModal } from '@/components/ui/PolishFormModal';
-import { SwipeToDismissModal, ModalDragHandle } from '@/components/ui/SwipeToDismissModal';
 
 export default function EditPolishScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,11 +20,8 @@ export default function EditPolishScreen() {
   }
 
   return (
-    <SwipeToDismissModal onDismiss={() => router.back()}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-        <ModalDragHandle />
-        <PolishFormModal onClose={() => router.back()} polish={polish} />
-      </SafeAreaView>
-    </SwipeToDismissModal>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <PolishFormModal onClose={() => router.back()} polish={polish} />
+    </SafeAreaView>
   );
 }

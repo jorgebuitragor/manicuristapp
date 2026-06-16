@@ -4,8 +4,8 @@ type Dict = Record<string, string>;
 
 const es: Dict = {
   // Auth
-  'auth.appName': 'Manicurist App',
-  'auth.login.subtitle': 'Acceso para profesionales',
+  'auth.appName': 'ManicuristApp',
+  'auth.login.subtitle': 'Gestiona tus citas, clientes y esmaltes',
   'auth.register.title': 'Crear cuenta',
   'auth.register.subtitle': 'Regístrate como profesional',
   'auth.email': 'Email',
@@ -27,6 +27,27 @@ const es: Dict = {
   'auth.confirmEmail.title': 'Revisa tu email',
   'auth.confirmEmail.message': 'Te hemos enviado un enlace de confirmación. Confírmalo y luego inicia sesión.',
 
+  // Onboarding
+  'onboarding.title': 'Configura tu espacio',
+  'onboarding.subtitle': '¿Cómo trabajas?',
+  'onboarding.homeStudio.title': 'Home Studio',
+  'onboarding.homeStudio.desc': 'Trabajo sola, de forma independiente',
+  'onboarding.salon.title': 'Salón de uñas',
+  'onboarding.salon.desc': 'Trabajo en equipo con otras profesionales',
+  'onboarding.studioName.label': 'Nombre del estudio',
+  'onboarding.studioName.placeholder': 'Ej: Nails by Ana, Studio Glow...',
+  'onboarding.yourName.label': 'Tu nombre',
+  'onboarding.yourName.placeholder': 'Nombre que verán tus clientes',
+  'onboarding.continue': 'Continuar',
+  'onboarding.finish': 'Empezar',
+  'onboarding.back': 'Atrás',
+  'onboarding.error.selectType': 'Elige cómo trabajas para continuar.',
+  'onboarding.error.studioName': 'Escribe el nombre de tu estudio.',
+  'onboarding.error.yourName': 'Escribe tu nombre.',
+  'onboarding.error.create': 'No se pudo crear el espacio. Intenta de nuevo.',
+  'onboarding.step1.title': 'Tipo de trabajo',
+  'onboarding.step2.title': 'Tu estudio',
+
   // Tabs
   'tabs.today': 'Hoy',
   'tabs.calendar': 'Agenda',
@@ -43,6 +64,14 @@ const es: Dict = {
   'home.newAppointment': 'Nueva',
   'home.empty': 'Sin citas para hoy',
   'home.newAppointmentShort': 'Nueva cita',
+  'home.summary.total': 'Total',
+  'home.summary.pending': 'Pendientes',
+  'home.summary.completed': 'Completadas',
+  'home.summary.earnings': 'Estimado',
+  'home.next': 'Próxima cita',
+  'home.nextNone': 'No hay más citas hoy',
+  'home.quickNewClient': 'Nuevo cliente',
+  'home.quickCalendar': 'Calendario',
 
   // Appointment status
   'status.pending': 'Pendiente',
@@ -50,6 +79,8 @@ const es: Dict = {
   'status.cancelled': 'Cancelada',
 
   // Calendar
+  'calendar.birthday': 'Cumpleaños',
+  'calendar.birthdayBanner': 'Hoy cumple años',
   'calendar.noAppointments': 'Sin citas ese día',
   'calendar.notes.title': 'Notas del día',
   'calendar.notes.hint': 'Puedes escribir con teclado o lápiz digital en este panel.',
@@ -88,6 +119,7 @@ const es: Dict = {
   'polishes.views.list': 'Lista',
   'polishes.views.swatch': 'Muestrario',
   'polishes.swatch.showAllPositions': 'Mostrar posiciones vacías',
+  'polishes.swatch.moveMode': 'Mover esmaltes',
   'polishes.filtersTitle': 'Filtros y orden',
   'polishes.clearFilters': 'Restablecer filtros',
   'polishes.filter.brand': 'Marca',
@@ -157,6 +189,14 @@ const es: Dict = {
   'polishes.section.identification': 'Identificación',
   'polishes.section.color': 'Color',
   'polishes.section.location': 'Ubicación',
+  'polishes.effect': 'Efecto',
+  'polishes.effect.none': 'Sin efecto',
+  'polishes.effect.matte': 'Mate',
+  'polishes.effect.shimmer': 'Shimmer / Perla',
+  'polishes.effect.glitter': 'Glitter',
+  'polishes.effect.cat_eye': 'Ojo de gato',
+  'polishes.effect.holographic': 'Holográfico',
+  'polishes.effect.duochrome': 'Duocromo',
   'polishes.uploading': 'Subiendo...',
   'polishes.addPhoto': 'Añadir foto',
   'polishes.capacity': 'Capacidad',
@@ -164,6 +204,12 @@ const es: Dict = {
   'polishes.position.overCapacity': 'Supera la capacidad máxima del esmaltero',
   'polishes.position.moved': 'Posición actualizada',
   'polishes.position.selectTarget': 'Toca la posición destino para mover',
+  'polishes.position.swapTitle': '¿Intercambiar esmaltes?',
+  'polishes.position.swapMessage': 'Se intercambiarán {a} y {b} de posición.',
+  'polishes.position.swapConfirm': 'Intercambiar',
+  'polishes.position.displaceTitle': '¿Mover esmalte?',
+  'polishes.position.displaceMessage': '{a} ocupará la posición de {b}. {b} quedará sin posición asignada.',
+  'polishes.position.displaceConfirm': 'Mover',
   'racks.new': 'Nuevo esmaltero',
   'racks.capacityPlaceholder': 'Capacidad',
   'polishes.noName': 'Sin nombre',
@@ -283,6 +329,9 @@ const es: Dict = {
   'appointment.multipleServicesHelp': 'Puedes seleccionar más de un servicio; vuelve a tocar uno para quitarlo.',
   'appointment.noServicesSelected': 'Sin servicios seleccionados',
   'appointment.noPolishesSelected': 'Sin esmaltes seleccionados (opcional)',
+  'appointment.services': 'Servicios',
+  'appointment.services.add': 'Añadir servicio',
+  'appointment.services.empty': 'Sin servicios registrados en esta cita',
   'appointment.polishes.add': 'Añadir esmalte',
   'appointment.polishes.empty': 'Sin esmaltes registrados en esta cita',
   'appointment.select.polish': 'Esmalte (opcional)',
@@ -323,6 +372,10 @@ const es: Dict = {
   'appointment.toast.statusUpdated': 'Estado actualizado',
   'appointment.toast.photoUploaded': 'Foto guardada',
   'appointment.toast.incomeRegistered': 'Ingreso registrado',
+  'appointment.whatsapp.remind': 'Recordar por WhatsApp',
+  'appointment.whatsapp.message': 'Hola {name}, te recuerdo que tienes una cita el {date} hasta las {end}. ¡Te espero! 💅',
+  'appointment.whatsapp.noPhone': 'Este cliente no tiene teléfono registrado.',
+  'appointment.whatsapp.notInstalled': 'WhatsApp no está instalado en este dispositivo.',
 
   // Income
   'tabs.incomes': 'Ingresos',
@@ -352,6 +405,7 @@ const es: Dict = {
   'incomes.stats.period.month': 'Este mes',
   'incomes.stats.period.year': 'Este año',
   'incomes.stats.period.all': 'Todo',
+  'incomes.stats.evolution': 'Evolución',
 
   'appointment.photo.save': 'Guardar',
   'appointment.photo.share': 'Compartir',
@@ -361,6 +415,24 @@ const es: Dict = {
   'photo.remove.message': 'La foto será eliminada.',
   'photo.remove.ok': 'Eliminar',
   'photo.change': 'Cambiar',
+
+  // Notifications (settings)
+  'settings.notifications': 'Notificaciones',
+  'settings.appointmentReminder': 'Recordatorio de cita',
+  'settings.appointmentReminderHint': 'Aviso antes de cada cita',
+  'settings.birthdayNotif': 'Cumpleaños de clientes',
+  'settings.birthdayNotifHint': 'Aviso el día del cumpleaños a las 9:00',
+  'settings.reminder.off': 'Desactivado',
+  'settings.reminder.5': '5 min',
+  'settings.reminder.10': '10 min',
+  'settings.reminder.15': '15 min',
+  'settings.reminder.30': '30 min',
+  'settings.reminder.60': '1 hora',
+
+  // Client birthday
+  'client.birthday': 'Fecha de nacimiento',
+  'client.birthdayAdd': 'Añadir fecha de nacimiento',
+  'client.birthdayNotSet': 'Sin fecha de nacimiento',
 
   // Client detail
   'client.detailsSection': 'Datos del cliente',
@@ -408,8 +480,8 @@ const es: Dict = {
 
 const en: Dict = {
   // Auth
-  'auth.appName': 'Manicurist App',
-  'auth.login.subtitle': 'Professional access',
+  'auth.appName': 'ManicuristApp',
+  'auth.login.subtitle': 'Manage your appointments, clients and polishes',
   'auth.register.title': 'Create account',
   'auth.register.subtitle': 'Sign up as a professional',
   'auth.email': 'Email',
@@ -431,6 +503,27 @@ const en: Dict = {
   'auth.confirmEmail.title': 'Check your email',
   'auth.confirmEmail.message': 'We sent you a confirmation link. Confirm it and then sign in.',
 
+  // Onboarding
+  'onboarding.title': 'Set up your space',
+  'onboarding.subtitle': 'How do you work?',
+  'onboarding.homeStudio.title': 'Home Studio',
+  'onboarding.homeStudio.desc': 'I work alone, independently',
+  'onboarding.salon.title': 'Nail Salon',
+  'onboarding.salon.desc': 'I work with a team of professionals',
+  'onboarding.studioName.label': 'Studio name',
+  'onboarding.studioName.placeholder': 'E.g. Nails by Ana, Studio Glow...',
+  'onboarding.yourName.label': 'Your name',
+  'onboarding.yourName.placeholder': 'Name your clients will see',
+  'onboarding.continue': 'Continue',
+  'onboarding.finish': 'Get started',
+  'onboarding.back': 'Back',
+  'onboarding.error.selectType': 'Choose how you work to continue.',
+  'onboarding.error.studioName': 'Enter your studio name.',
+  'onboarding.error.yourName': 'Enter your name.',
+  'onboarding.error.create': 'Could not create your space. Please try again.',
+  'onboarding.step1.title': 'Work type',
+  'onboarding.step2.title': 'Your studio',
+
   // Tabs
   'tabs.today': 'Today',
   'tabs.calendar': 'Schedule',
@@ -447,6 +540,14 @@ const en: Dict = {
   'home.newAppointment': 'New',
   'home.empty': 'No appointments today',
   'home.newAppointmentShort': 'New appointment',
+  'home.summary.total': 'Total',
+  'home.summary.pending': 'Pending',
+  'home.summary.completed': 'Completed',
+  'home.summary.earnings': 'Estimated',
+  'home.next': 'Next appointment',
+  'home.nextNone': 'No more appointments today',
+  'home.quickNewClient': 'New client',
+  'home.quickCalendar': 'Calendar',
 
   // Appointment status
   'status.pending': 'Pending',
@@ -454,6 +555,8 @@ const en: Dict = {
   'status.cancelled': 'Cancelled',
 
   // Calendar
+  'calendar.birthday': 'Birthday',
+  'calendar.birthdayBanner': 'Birthday today',
   'calendar.noAppointments': 'No appointments that day',
   'calendar.notes.title': 'Day notes',
   'calendar.notes.hint': 'You can write with keyboard or digital pencil in this panel.',
@@ -492,6 +595,7 @@ const en: Dict = {
   'polishes.views.list': 'List',
   'polishes.views.swatch': 'Swatches',
   'polishes.swatch.showAllPositions': 'Show empty positions',
+  'polishes.swatch.moveMode': 'Move polishes',
   'polishes.filtersTitle': 'Filters and sorting',
   'polishes.clearFilters': 'Reset filters',
   'polishes.filter.brand': 'Brand',
@@ -561,6 +665,14 @@ const en: Dict = {
   'polishes.section.identification': 'Identification',
   'polishes.section.color': 'Color',
   'polishes.section.location': 'Location',
+  'polishes.effect': 'Effect',
+  'polishes.effect.none': 'No effect',
+  'polishes.effect.matte': 'Matte',
+  'polishes.effect.shimmer': 'Shimmer / Pearl',
+  'polishes.effect.glitter': 'Glitter',
+  'polishes.effect.cat_eye': 'Cat Eye',
+  'polishes.effect.holographic': 'Holographic',
+  'polishes.effect.duochrome': 'Duochrome',
   'polishes.uploading': 'Uploading...',
   'polishes.addPhoto': 'Add photo',
   'polishes.capacity': 'Capacity',
@@ -568,6 +680,12 @@ const en: Dict = {
   'polishes.position.overCapacity': 'Exceeds the rack\'s maximum capacity',
   'polishes.position.moved': 'Position updated',
   'polishes.position.selectTarget': 'Tap the target position to move',
+  'polishes.position.swapTitle': 'Swap polishes?',
+  'polishes.position.swapMessage': '{a} and {b} will swap positions.',
+  'polishes.position.swapConfirm': 'Swap',
+  'polishes.position.displaceTitle': 'Move polish?',
+  'polishes.position.displaceMessage': '{a} will take {b}\'s position. {b} will be left unassigned.',
+  'polishes.position.displaceConfirm': 'Move',
   'racks.new': 'New rack',
   'racks.capacityPlaceholder': 'Capacity',
   'polishes.noName': 'Unnamed',
@@ -687,6 +805,9 @@ const en: Dict = {
   'appointment.multipleServicesHelp': 'You can select more than one service; tap one again to remove it.',
   'appointment.noServicesSelected': 'No services selected',
   'appointment.noPolishesSelected': 'No polishes selected (optional)',
+  'appointment.services': 'Services',
+  'appointment.services.add': 'Add service',
+  'appointment.services.empty': 'No services recorded for this appointment',
   'appointment.polishes.add': 'Add polish',
   'appointment.polishes.empty': 'No polishes recorded for this appointment',
   'appointment.select.polish': 'Polish (optional)',
@@ -727,6 +848,10 @@ const en: Dict = {
   'appointment.toast.statusUpdated': 'Status updated',
   'appointment.toast.photoUploaded': 'Photo saved',
   'appointment.toast.incomeRegistered': 'Income registered',
+  'appointment.whatsapp.remind': 'Remind via WhatsApp',
+  'appointment.whatsapp.message': 'Hi {name}, just a reminder that you have an appointment on {date} until {end}. See you! 💅',
+  'appointment.whatsapp.noPhone': 'This client has no phone registered.',
+  'appointment.whatsapp.notInstalled': 'WhatsApp is not installed on this device.',
 
   // Income
   'tabs.incomes': 'Income',
@@ -756,6 +881,7 @@ const en: Dict = {
   'incomes.stats.period.month': 'This month',
   'incomes.stats.period.year': 'This year',
   'incomes.stats.period.all': 'All time',
+  'incomes.stats.evolution': 'Evolution',
 
   'appointment.photo.save': 'Save',
   'appointment.photo.share': 'Share',
@@ -765,6 +891,24 @@ const en: Dict = {
   'photo.remove.message': 'The photo will be removed.',
   'photo.remove.ok': 'Remove',
   'photo.change': 'Change',
+
+  // Notifications (settings)
+  'settings.notifications': 'Notifications',
+  'settings.appointmentReminder': 'Appointment reminder',
+  'settings.appointmentReminderHint': 'Alert before each appointment',
+  'settings.birthdayNotif': 'Client birthdays',
+  'settings.birthdayNotifHint': 'Notify on birthday at 9:00',
+  'settings.reminder.off': 'Off',
+  'settings.reminder.5': '5 min',
+  'settings.reminder.10': '10 min',
+  'settings.reminder.15': '15 min',
+  'settings.reminder.30': '30 min',
+  'settings.reminder.60': '1 hour',
+
+  // Client birthday
+  'client.birthday': 'Date of birth',
+  'client.birthdayAdd': 'Add date of birth',
+  'client.birthdayNotSet': 'No date of birth',
 
   // Client detail
   'client.detailsSection': 'Client details',

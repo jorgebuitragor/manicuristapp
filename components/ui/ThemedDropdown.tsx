@@ -56,15 +56,25 @@ export function ThemedDropdown({
     triggerRef.current?.measureInWindow((x, y, measuredWidth, measuredHeight) => {
       const safeWidth = Math.min(Math.max(measuredWidth, 180), windowWidth - 32);
       const left = Math.max(16, Math.min(x, windowWidth - safeWidth - 16));
-      const top = y + measuredHeight + 6;
-      const availableHeight = Math.max(120, windowHeight - top - 16);
 
-      setMenuFrame({
-        x: left,
-        y: top,
-        width: safeWidth,
-        maxHeight: Math.min(340, availableHeight),
-      });
+      const spaceBelow = windowHeight - (y + measuredHeight) - 16;
+      const spaceAbove = y - 16;
+      const estimatedHeight = Math.min(340, (searchable ? 48 : 0) + options.length * 44 + 16);
+
+      let top: number;
+      let maxHeight: number;
+
+      if (spaceBelow >= estimatedHeight || spaceBelow >= spaceAbove) {
+        // Open downward
+        top = y + measuredHeight + 6;
+        maxHeight = Math.min(340, Math.max(120, spaceBelow));
+      } else {
+        // Open upward
+        maxHeight = Math.min(340, Math.max(120, spaceAbove));
+        top = y - maxHeight - 6;
+      }
+
+      setMenuFrame({ x: left, y: top, width: safeWidth, maxHeight });
       setIsOpen(true);
       if (searchable) {
         setTimeout(() => searchRef.current?.focus(), 80);

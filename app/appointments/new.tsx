@@ -8,8 +8,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
+import { useError } from '@/context/ErrorContext';
+import { useOrganization } from '@/context/OrganizationContext';
 import { useCreateAppointment, useAddPolishToAppointment, findConflictingAppointments } from '@/hooks/useAppointments';
 import { syncAppointmentToCalendar } from '@/hooks/useGoogleCalendar';
+import { useNotificationSettings } from '@/context/NotificationContext';
+import { scheduleAppointmentReminder } from '@/lib/notifications';
 import { useClients } from '@/hooks/useClients';
 import { useServices } from '@/hooks/useServices';
 import { usePolishes } from '@/hooks/usePolishes';
@@ -32,13 +36,16 @@ export default function NewAppointmentScreen() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const { showToast } = useToast();
+  const { showError } = useError();
   const { is24Hour } = useTimeFormat();
+  const { organizationId } = useOrganization();
 
   const { data: clients = [] } = useClients();
   const { data: services = [] } = useServices();
   const { data: polishes = [] } = usePolishes();
   const createAppointment = useCreateAppointment();
   const addPolish = useAddPolishToAppointment();
+  const { reminderEnabled, reminderMinutes } = useNotificationSettings();
 
   const [selectedClientId, setSelectedClientId] = useState<string>(params.client_id ?? '');
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
@@ -72,15 +79,15 @@ export default function NewAppointmentScreen() {
   }
 
   async function handleCreate() {
-    if (!selectedClientId) { showToast(t('appointment.error.clientRequired'), 'error'); return; }
-    if (endTime <= startTime) { showToast(t('appointment.error.timeConflict'), 'error'); return; }
+    if (!selectedClientId) { showError(t('appointment.error.clientRequired')); return; }
+    if (endTime <= startTime) { showError(t('appointment.error.timeConflict')); return; }
 
-    const conflicts = await findConflictingAppointments(isoFromDate(startTime), isoFromDate(endTime));
+    const conflicts = await findConflictingAppointments(isoFromDate(startTime), isoFromDate(endTime), organizationId!);
     if (conflicts.length > 0) {
       const names = conflicts.map((c) => c.client?.name ?? '?').join(', ');
       const fmt = (d: Date) => d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: !is24Hour });
       const time = `${fmt(new Date(conflicts[0].start_time))} – ${fmt(new Date(conflicts[0].end_time))}`;
-      showToast(t('appointment.error.conflict.message').replace('{client}', names).replace('{time}', time), 'error');
+      showError(t('appointment.error.conflict.title'), t('appointment.error.conflict.message').replace('{client}', names).replace('{time}', time));
       return;
     }
 
@@ -100,9 +107,15 @@ export default function NewAppointmentScreen() {
       );
     }
 
-    // Fire-and-forget Google Calendar sync
     const clientName = clients.find((c) => c.id === selectedClientId)?.name ?? '';
     const serviceNames = services.filter((s) => selectedServiceIds.includes(s.id)).map((s) => s.name);
+
+    // Schedule appointment reminder
+    if (reminderEnabled) {
+      scheduleAppointmentReminder(created.id, isoFromDate(startTime), clientName, serviceNames, reminderMinutes);
+    }
+
+    // Fire-and-forget Google Calendar sync
     syncAppointmentToCalendar({
       appointmentId: created.id,
       clientName,

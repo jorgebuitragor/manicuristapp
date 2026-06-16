@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { TextInput, StyleSheet, type TextInputProps } from 'react-native';
+import { TextInput, StyleSheet, Platform, type TextInputProps } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 
 export const ThemedInput = forwardRef<TextInput, TextInputProps>(function ThemedInput(
@@ -33,5 +33,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+    // Android: elimina el padding interno de fuente que desalinea el texto
+    ...(Platform.OS === 'android' ? { includeFontPadding: false, textAlignVertical: 'center' } : {}),
   },
 });

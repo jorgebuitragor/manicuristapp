@@ -10,12 +10,14 @@ import { ThemedInput } from '@/components/ui/ThemedInput';
 import { ColorPickerField } from '@/components/ui/ColorPickerField';
 import { ThemedDropdown } from '@/components/ui/ThemedDropdown';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { SwipeToDismissModal } from '@/components/ui/SwipeToDismissModal';
 import { usePolishes, useCreatePolish, useUpdatePolish } from '@/hooks/usePolishes';
 import { usePolishBrands } from '@/hooks/usePolishBrands';
 import { useNailRacks } from '@/hooks/useNailRacks';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
+import { useError } from '@/context/ErrorContext';
 import type { NailPolish } from '@/types/database.types';
 
 function normalizeHexColor(value: string) {
@@ -66,9 +68,11 @@ function StockStepper({ value, onChange }: { value: number; onChange: (v: number
 interface PolishFormModalProps {
   onClose: () => void;
   polish?: NailPolish | null;
+  initialRackId?: string;
+  initialPosition?: number;
 }
 
-export function PolishFormModal({ onClose, polish }: PolishFormModalProps) {
+export function PolishFormModal({ onClose, polish, initialRackId, initialPosition }: PolishFormModalProps) {
   const createPolish = useCreatePolish();
   const updatePolish = useUpdatePolish();
   const { data: brands = [] } = usePolishBrands();
@@ -76,12 +80,13 @@ export function PolishFormModal({ onClose, polish }: PolishFormModalProps) {
   const { data: allPolishes = [] } = usePolishes();
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [polishCode, setPolishCode] = useState('');
-  const [selectedRackId, setSelectedRackId] = useState('');
-  const [rackPosition, setRackPosition] = useState('');
+  const [selectedRackId, setSelectedRackId] = useState(initialRackId ?? '');
+  const [rackPosition, setRackPosition] = useState(initialPosition != null ? String(initialPosition) : '');
   const [colorName, setColorName] = useState('');
   const [hexColor, setHexColor] = useState('');
   const [baseColor, setBaseColor] = useState('pink');
   const [toneFamily, setToneFamily] = useState('classic');
+  const [effect, setEffect] = useState<string>('');
   const [showColorPickerModal, setShowColorPickerModal] = useState(false);
   const [stock, setStock] = useState(1);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -90,6 +95,7 @@ export function PolishFormModal({ onClose, polish }: PolishFormModalProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const { showToast } = useToast();
+  const { showError } = useError();
   const isEditing = Boolean(polish);
 
   const { selectedRack, positionSlots, parsedPosition, isPositionTaken, isOverCapacity, occupantPolish } = useMemo(() => {
@@ -133,6 +139,7 @@ export function PolishFormModal({ onClose, polish }: PolishFormModalProps) {
     setHexColor(polish.hex_color ?? '');
     setBaseColor(polish.base_color ?? 'pink');
     setToneFamily(polish.tone_family ?? 'classic');
+    setEffect(polish.effect ?? '');
     setShowColorPickerModal(false);
     setStock(polish.stock ?? 1);
     setPhotoUrl(polish.photo_url ?? null);
@@ -141,12 +148,12 @@ export function PolishFormModal({ onClose, polish }: PolishFormModalProps) {
   async function handleSave() {
     const selectedBrand = brands.find((b) => b.id === selectedBrandId);
     if (!selectedBrand || !colorName.trim() || !polishCode.trim()) {
-      showToast(t('polishes.error.required'), 'error');
+      showError(t('polishes.error.required'));
       return;
     }
     const normalizedHex = normalizeHexColor(hexColor);
     if (hexColor.trim() && !normalizedHex) {
-      showToast(t('polishes.invalidHex'), 'error');
+      showError(t('polishes.invalidHex'));
       return;
     }
     const payload = {
@@ -159,6 +166,7 @@ export function PolishFormModal({ onClose, polish }: PolishFormModalProps) {
       hex_color: normalizedHex,
       base_color: baseColor || null,
       tone_family: toneFamily || null,
+      effect: (effect || null) as NailPolish['effect'],
       photo_url: photoUrl,
       stock,
       notes: polish?.notes ?? null,
@@ -257,6 +265,22 @@ export function PolishFormModal({ onClose, polish }: PolishFormModalProps) {
           </View>
         </TouchableOpacity>
 
+        <ThemedDropdown
+          label={t('polishes.effect')}
+          value={effect}
+          options={[
+            { value: '', label: t('polishes.effect.none') },
+            { value: 'matte', label: t('polishes.effect.matte') },
+            { value: 'shimmer', label: t('polishes.effect.shimmer') },
+            { value: 'glitter', label: t('polishes.effect.glitter') },
+            { value: 'cat_eye', label: t('polishes.effect.cat_eye') },
+            { value: 'holographic', label: t('polishes.effect.holographic') },
+            { value: 'duochrome', label: t('polishes.effect.duochrome') },
+          ]}
+          onChange={setEffect}
+          stackOrder={15}
+        />
+
         <FormSection label={t('polishes.section.location')} />
 
         <ThemedDropdown
@@ -347,30 +371,32 @@ export function PolishFormModal({ onClose, polish }: PolishFormModalProps) {
 
       {showColorPickerModal ? (
         <View style={[styles.colorModalOverlay, { backgroundColor: colors.background }]}>
-          <ScreenHeader
-            leadingLabel={t('common.cancel')}
-            onLeadingPress={() => setShowColorPickerModal(false)}
-            title={t('polishes.selectColor')}
-            trailingLabel={t('common.ok')}
-            onTrailingPress={() => setShowColorPickerModal(false)}
-          />
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-          >
-            <ColorPickerField
-              value={hexColor}
-              onChangeValue={setHexColor}
-              baseColor={baseColor}
-              onChangeBaseColor={setBaseColor}
-              toneFamily={toneFamily}
-              onChangeToneFamily={setToneFamily}
-              label={t('polishes.selectColor')}
-              placeholder={t('polishes.hexColor')}
-              hint={t('polishes.colorHint')}
+          <SwipeToDismissModal onDismiss={() => setShowColorPickerModal(false)} containerStyle={styles.colorSwipeSurface}>
+            <ScreenHeader
+              leadingLabel={t('common.cancel')}
+              onLeadingPress={() => setShowColorPickerModal(false)}
+              title={t('polishes.selectColor')}
+              trailingLabel={t('common.ok')}
+              onTrailingPress={() => setShowColorPickerModal(false)}
             />
-          </ScrollView>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.content}
+              keyboardShouldPersistTaps="handled"
+            >
+              <ColorPickerField
+                value={hexColor}
+                onChangeValue={setHexColor}
+                baseColor={baseColor}
+                onChangeBaseColor={setBaseColor}
+                toneFamily={toneFamily}
+                onChangeToneFamily={setToneFamily}
+                label={t('polishes.selectColor')}
+                placeholder={t('polishes.hexColor')}
+                hint={t('polishes.colorHint')}
+              />
+            </ScrollView>
+          </SwipeToDismissModal>
         </View>
       ) : null}
     </View>
@@ -467,5 +493,8 @@ const styles = StyleSheet.create({
   colorModalOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 20,
+  },
+  colorSwipeSurface: {
+    flex: 1,
   },
 });

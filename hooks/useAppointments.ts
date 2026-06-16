@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useOrganization } from '@/context/OrganizationContext';
 import type { Appointment, AppointmentWithRelations } from '@/types/database.types';
 
 export const APPOINTMENTS_KEY = ['appointments'] as const;
@@ -43,35 +44,43 @@ function localDayBounds(date: string) {
 }
 
 export function useAppointmentsByDate(date: string) {
+  const { organizationId } = useOrganization();
   return useQuery({
-    queryKey: [...APPOINTMENTS_KEY, 'date', date],
+    queryKey: [...APPOINTMENTS_KEY, 'date', date, organizationId],
     queryFn: async () => {
+      if (!organizationId) return [];
       const { start, end } = localDayBounds(date);
       const { data, error } = await supabase
         .from('appointments')
         .select(APPOINTMENT_WITH_RELATIONS)
+        .eq('organization_id', organizationId)
         .gte('start_time', start)
         .lte('start_time', end)
         .order('start_time');
       if (error) throw error;
       return (data ?? []).map(mapAppointmentRelations);
     },
+    enabled: !!organizationId,
   });
 }
 
 export function useAppointmentsByDateRange(startDate: string, endDate: string) {
+  const { organizationId } = useOrganization();
   return useQuery({
-    queryKey: [...APPOINTMENTS_KEY, 'range', startDate, endDate],
+    queryKey: [...APPOINTMENTS_KEY, 'range', startDate, endDate, organizationId],
     queryFn: async () => {
+      if (!organizationId) return [];
       const { data, error } = await supabase
         .from('appointments')
         .select(APPOINTMENT_WITH_RELATIONS)
+        .eq('organization_id', organizationId)
         .gte('start_time', new Date(`${startDate}T00:00:00`).toISOString())
         .lte('start_time', new Date(`${endDate}T23:59:59`).toISOString())
         .order('start_time');
       if (error) throw error;
       return (data ?? []).map(mapAppointmentRelations);
     },
+    enabled: !!organizationId,
   });
 }
 
@@ -107,10 +116,16 @@ export function useAppointment(id: string) {
   });
 }
 
-export async function findConflictingAppointments(startIso: string, endIso: string, excludeId?: string) {
+export async function findConflictingAppointments(
+  startIso: string,
+  endIso: string,
+  organizationId: string,
+  excludeId?: string,
+) {
   let query = supabase
     .from('appointments')
     .select('id, start_time, end_time, client:clients(name)')
+    .eq('organization_id', organizationId)
     .lt('start_time', endIso)
     .gt('end_time', startIso)
     .neq('status', 'cancelled');
@@ -134,12 +149,18 @@ type AppointmentInput = {
 
 export function useCreateAppointment() {
   const qc = useQueryClient();
+  const { organizationId } = useOrganization();
   return useMutation({
     mutationFn: async ({ service_ids, ...input }: AppointmentInput) => {
       const primaryServiceId = service_ids?.[0] ?? null;
       const { data, error } = await supabase
         .from('appointments')
-        .insert({ ...input, service_id: primaryServiceId, status: input.status ?? 'pending' })
+        .insert({
+          ...input,
+          service_id: primaryServiceId,
+          status: input.status ?? 'pending',
+          organization_id: organizationId,
+        })
         .select()
         .single();
       if (error) throw error;
@@ -218,6 +239,38 @@ export function useDeleteAppointment() {
   });
 }
 
+export function useAddServiceToAppointment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ appointment_id, service_id }: { appointment_id: string; service_id: string }) => {
+      const { error } = await supabase
+        .from('appointment_services')
+        .upsert({ appointment_id, service_id }, { onConflict: 'appointment_id,service_id' });
+      if (error) throw error;
+      // Keep legacy service_id in sync with first service
+      await supabase.from('appointments').update({ service_id }).eq('id', appointment_id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: APPOINTMENTS_KEY }),
+  });
+}
+
+export function useRemoveServiceFromAppointment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ appointment_id, service_id, remaining_service_id }: { appointment_id: string; service_id: string; remaining_service_id: string | null }) => {
+      const { error } = await supabase
+        .from('appointment_services')
+        .delete()
+        .eq('appointment_id', appointment_id)
+        .eq('service_id', service_id);
+      if (error) throw error;
+      // Update legacy service_id to next remaining service (or null)
+      await supabase.from('appointments').update({ service_id: remaining_service_id }).eq('id', appointment_id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: APPOINTMENTS_KEY }),
+  });
+}
+
 export function useAddPolishToAppointment() {
   const qc = useQueryClient();
   return useMutation({
@@ -247,12 +300,15 @@ export function useRemovePolishFromAppointment() {
 }
 
 export function useSearchAppointments(query: string) {
+  const { organizationId } = useOrganization();
   return useQuery({
-    queryKey: [...APPOINTMENTS_KEY, 'search', query],
+    queryKey: [...APPOINTMENTS_KEY, 'search', query, organizationId],
     queryFn: async () => {
+      if (!organizationId) return [];
       const { data, error } = await supabase
         .from('appointments')
         .select(APPOINTMENT_WITH_RELATIONS)
+        .eq('organization_id', organizationId)
         .order('start_time', { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -265,6 +321,6 @@ export function useSearchAppointments(query: string) {
           apt.services.some((s) => s.name?.toLowerCase().includes(q))
       );
     },
-    enabled: query.length > 1,
+    enabled: query.length > 1 && !!organizationId,
   });
 }

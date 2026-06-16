@@ -17,8 +17,11 @@ import { useI18n } from '@/context/I18nContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients';
 import { useConfirm } from '@/context/ConfirmContext';
+import { useNotificationSettings } from '@/context/NotificationContext';
 import { useAppointmentsByClient } from '@/hooks/useAppointments';
 import { useTimeFormat } from '@/context/TimeFormatContext';
+import { BirthdayPickerField } from '@/components/ui/AppDatePicker';
+import { scheduleBirthdayNotification, cancelBirthdayNotification } from '@/lib/notifications';
 import type { AppointmentWithRelations } from '@/types/database.types';
 
 function formatDateTime(iso: string, is24Hour: boolean) {
@@ -112,12 +115,14 @@ export default function ClientDetailScreen() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const { showConfirm } = useConfirm();
+  const { birthdayNotificationsEnabled } = useNotificationSettings();
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [allergies, setAllergies] = useState('');
+  const [birthday, setBirthday] = useState<Date | null>(null);
 
   useEffect(() => {
     if (client) {
@@ -125,18 +130,28 @@ export default function ClientDetailScreen() {
       setPhone(client.phone ?? '');
       setNotes(client.notes ?? '');
       setAllergies(client.allergies ?? '');
+      setBirthday(client.birthday ? new Date(client.birthday + 'T12:00:00') : null);
     }
   }, [client]);
 
   async function handleSave() {
     if (!name.trim()) return;
+    const birthdayISO = birthday ? birthday.toISOString().split('T')[0] : null;
     await updateClient.mutateAsync({
       id,
       name: name.trim(),
       phone: phone.trim() || null,
       notes: notes.trim() || null,
       allergies: allergies.trim() || null,
+      birthday: birthdayISO,
     });
+
+    if (birthdayISO && birthdayNotificationsEnabled) {
+      scheduleBirthdayNotification(id, name.trim(), birthdayISO);
+    } else if (!birthdayISO) {
+      cancelBirthdayNotification(id);
+    }
+
     setEditing(false);
   }
 
@@ -147,10 +162,15 @@ export default function ClientDetailScreen() {
       confirmLabel: t('client.delete.ok'),
       variant: 'danger',
       onConfirm: async () => {
+        cancelBirthdayNotification(id);
         await deleteClient.mutateAsync(id);
         router.back();
       },
     });
+  }
+
+  function formatBirthday(d: Date): string {
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   if (isLoading) {
@@ -215,6 +235,19 @@ export default function ClientDetailScreen() {
             )}
             <ClientField label={t('client.allergies')} value={allergies} editing={editing} multiline onChangeText={setAllergies} />
             <ClientField label={t('client.notes')} value={notes} editing={editing} multiline onChangeText={setNotes} />
+
+            {editing ? (
+              <BirthdayPickerField
+                label={t('client.birthday')}
+                value={birthday}
+                onChange={(d: Date) => setBirthday(d)}
+              />
+            ) : (
+              <View style={styles.field}>
+                <ThemedText variant="caption" tone="tertiary" style={styles.fieldLabel}>{t('client.birthday')}</ThemedText>
+                <ThemedText>{birthday ? formatBirthday(birthday) : '—'}</ThemedText>
+              </View>
+            )}
           </ThemedSection>
 
           <ThemedSection>

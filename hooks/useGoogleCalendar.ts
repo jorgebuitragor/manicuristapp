@@ -12,6 +12,7 @@ import {
   deleteCalendarEvent,
   GOOGLE_IOS_CLIENT_ID,
   GOOGLE_ANDROID_CLIENT_ID,
+  GOOGLE_CLIENT_ID,
   type CalendarEventPayload,
 } from '@/lib/googleCalendar';
 import { supabase } from '@/lib/supabase';
@@ -52,7 +53,7 @@ export function useGoogleCalendarConnection() {
 
     setIsConnecting(true);
     AuthSession.exchangeCodeAsync(
-      { clientId: GOOGLE_IOS_CLIENT_ID, code, redirectUri, extraParams: { code_verifier: codeVerifier } },
+      { clientId: GOOGLE_CLIENT_ID, code, redirectUri, extraParams: { code_verifier: codeVerifier } },
       GOOGLE_DISCOVERY,
     )
       .then(async (tokenResponse) => {

@@ -16,7 +16,7 @@ export function OfflineBanner() {
   const wasOfflineRef = useRef(false);
 
   // Mutaciones pausadas = en cola esperando conexión
-  const pausedMutations = useMutationState({ filters: { status: 'paused' } });
+  const pausedMutations = useMutationState({ filters: { predicate: (m) => m.state.isPaused === true } });
   const hasPaused = pausedMutations.length > 0;
 
   useEffect(() => {

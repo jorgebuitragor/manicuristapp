@@ -60,17 +60,25 @@ export default function BrandsScreen() {
 
   async function handleCreate() {
     if (!newName.trim()) return;
-    await createBrand.mutateAsync(newName);
-    setNewName('');
-    showToast(t('brands.toast.created'));
+    try {
+      await createBrand.mutateAsync(newName);
+      setNewName('');
+      showToast(t('brands.toast.created'));
+    } catch {
+      showToast(t('common.error'), 'error');
+    }
   }
 
   async function handleUpdate() {
     if (!editingId || !editingName.trim()) return;
-    await updateBrand.mutateAsync({ id: editingId, name: editingName });
-    setEditingId(null);
-    setEditingName('');
-    showToast(t('brands.toast.updated'));
+    try {
+      await updateBrand.mutateAsync({ id: editingId, name: editingName });
+      setEditingId(null);
+      setEditingName('');
+      showToast(t('brands.toast.updated'));
+    } catch {
+      showToast(t('common.error'), 'error');
+    }
   }
 
   function handleDelete(brand: PolishBrand) {
@@ -92,7 +100,7 @@ export default function BrandsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenHeader
         leadingIcon="arrow-back"
-        onLeadingPress={() => router.back()}
+        onLeadingPress={() => router.navigate('/(tabs)/settings')}
         title={t('brands.title')}
       />
 

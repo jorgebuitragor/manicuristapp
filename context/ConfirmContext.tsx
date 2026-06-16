@@ -54,6 +54,7 @@ import { Modal, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { ThemedButton } from '@/components/ui/ThemedButton';
+import { SwipeToDismissModal } from '@/components/ui/SwipeToDismissModal';
 
 function ConfirmRenderer({ state, onDismiss }: { state: ConfirmState; onDismiss: () => void }) {
   const { colors } = useTheme();
@@ -77,37 +78,39 @@ function ConfirmRenderer({ state, onDismiss }: { state: ConfirmState; onDismiss:
       statusBarTranslucent
     >
       <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleCancel}>
-        <TouchableOpacity
-          activeOpacity={1}
-          style={[styles.sheet, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
-        >
-          <ThemedText variant="subtitle" style={styles.title}>
-            {state.title}
-          </ThemedText>
-
-          {state.message ? (
-            <ThemedText tone="secondary" style={styles.message}>
-              {state.message}
+        <SwipeToDismissModal onDismiss={handleCancel} containerStyle={styles.sheetSwipeSurface}>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.sheet, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
+          >
+            <ThemedText variant="subtitle" style={styles.title}>
+              {state.title}
             </ThemedText>
-          ) : null}
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            {state.message ? (
+              <ThemedText tone="secondary" style={styles.message}>
+                {state.message}
+              </ThemedText>
+            ) : null}
 
-          <View style={styles.actions}>
-            <ThemedButton
-              label={state.cancelLabel ?? 'Cancelar'}
-              variant="outline"
-              onPress={handleCancel}
-              style={styles.actionButton}
-            />
-            <ThemedButton
-              label={state.confirmLabel ?? 'Confirmar'}
-              variant={state.variant === 'danger' ? 'dangerOutline' : 'primary'}
-              onPress={handleConfirm}
-              style={styles.actionButton}
-            />
-          </View>
-        </TouchableOpacity>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+            <View style={styles.actions}>
+              <ThemedButton
+                label={state.cancelLabel ?? 'Cancelar'}
+                variant="outline"
+                onPress={handleCancel}
+                style={styles.actionButton}
+              />
+              <ThemedButton
+                label={state.confirmLabel ?? 'Confirmar'}
+                variant={state.variant === 'danger' ? 'dangerOutline' : 'primary'}
+                onPress={handleConfirm}
+                style={styles.actionButton}
+              />
+            </View>
+          </TouchableOpacity>
+        </SwipeToDismissModal>
       </TouchableOpacity>
     </Modal>
   );
@@ -120,6 +123,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 28,
+  },
+  sheetSwipeSurface: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sheet: {
     width: '100%',

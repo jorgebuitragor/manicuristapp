@@ -72,19 +72,27 @@ export default function RacksScreen() {
 
   async function handleCreate() {
     if (!newName.trim()) return;
-    await createRack.mutateAsync({ name: newName, max_capacity: parseCapacity(newCapacity) });
-    setNewName('');
-    setNewCapacity('');
-    showToast(t('racks.toast.created'));
+    try {
+      await createRack.mutateAsync({ name: newName, max_capacity: parseCapacity(newCapacity) });
+      setNewName('');
+      setNewCapacity('');
+      showToast(t('racks.toast.created'));
+    } catch {
+      showToast(t('common.error'), 'error');
+    }
   }
 
   async function handleUpdate() {
     if (!editingId || !editingName.trim()) return;
-    await updateRack.mutateAsync({ id: editingId, name: editingName, max_capacity: parseCapacity(editingCapacity) });
-    setEditingId(null);
-    setEditingName('');
-    setEditingCapacity('');
-    showToast(t('racks.toast.updated'));
+    try {
+      await updateRack.mutateAsync({ id: editingId, name: editingName, max_capacity: parseCapacity(editingCapacity) });
+      setEditingId(null);
+      setEditingName('');
+      setEditingCapacity('');
+      showToast(t('racks.toast.updated'));
+    } catch {
+      showToast(t('common.error'), 'error');
+    }
   }
 
   function handleDelete(rack: NailRack) {
@@ -107,7 +115,7 @@ export default function RacksScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenHeader
         leadingIcon="arrow-back"
-        onLeadingPress={() => router.back()}
+        onLeadingPress={() => router.navigate('/(tabs)/settings')}
         title={t('racks.title')}
       />
 

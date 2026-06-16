@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View, TouchableOpacity, StyleSheet, useWindowDimensions,
   ScrollView, ActivityIndicator, TextInput,
@@ -13,13 +13,16 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { ThemedCalendar } from '@/components/ui/ThemedCalendar';
 import { CalendarNotesPad } from '@/components/ui/CalendarNotesPad';
 import { useAppointmentsByDate, useAppointmentsByDateRange, useSearchAppointments } from '@/hooks/useAppointments';
+import { useClients } from '@/hooks/useClients';
 import { supabase } from '@/lib/supabase';
 import { queryClient } from '@/lib/queryClient';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useDrawingPad } from '@/context/DrawingPadContext';
 import { useTimeFormat } from '@/context/TimeFormatContext';
-import type { AppointmentWithRelations } from '@/types/database.types';
+import type { AppointmentWithRelations, Client } from '@/types/database.types';
+
+const BIRTHDAY_COLOR = '#E91E63';
 
 type CalendarView = 'day' | 'week';
 
@@ -105,6 +108,18 @@ function TimelineBlock({ apt, onPress }: { apt: AppointmentWithRelations; onPres
   );
 }
 
+function BirthdayBanner({ clients }: { clients: Client[] }) {
+  const { t } = useI18n();
+  return (
+    <View style={styles.birthdayBanner}>
+      <Ionicons name="gift-outline" size={16} color={BIRTHDAY_COLOR} />
+      <ThemedText style={[styles.birthdayText, { color: BIRTHDAY_COLOR }]}>
+        {t('calendar.birthdayBanner')}: {clients.map((c) => c.name).join(', ')}
+      </ThemedText>
+    </View>
+  );
+}
+
 function SearchResultRow({ apt, onPress }: { apt: AppointmentWithRelations; onPress: () => void }) {
   const { colors } = useTheme();
   const { lang } = useI18n();
@@ -157,6 +172,21 @@ export default function CalendarScreen() {
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchRef = useRef<TextInput>(null);
+  const { data: clients } = useClients();
+
+  // Map of 'YYYY-MM-DD' → clients with birthday on that day (year-agnostic)
+  const birthdayMap = useMemo(() => {
+    const map: Record<string, Client[]> = {};
+    for (const c of clients ?? []) {
+      if (!c.birthday) continue;
+      const mmdd = c.birthday.slice(5); // 'MM-DD'
+      const year = new Date().getFullYear();
+      const key = `${year}-${mmdd}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(c);
+    }
+    return map;
+  }, [clients]);
 
   const { data: dayAppointments, isLoading: dayLoading } = useAppointmentsByDate(selectedDate);
 
@@ -198,16 +228,44 @@ export default function CalendarScreen() {
     }
   }, [calView]);
 
-  const markedDates: Record<string, any> = {
-    [selectedDate]: { selected: true, selectedColor: colors.primary },
-  };
+  const markedDates = useMemo(() => {
+    const result: Record<string, any> = {};
 
-  if (calView === 'week') {
-    for (let i = 0; i < 7; i++) {
-      const d = addDays(weekAnchor, i);
-      markedDates[d] = { ...(markedDates[d] ?? {}), marked: true, dotColor: colors.primary };
+    // Birthday dots for all known birthdays
+    for (const [date, bClients] of Object.entries(birthdayMap)) {
+      result[date] = {
+        ...(result[date] ?? {}),
+        dots: [
+          ...(result[date]?.dots ?? []),
+          { key: `bday-${bClients[0].id}`, color: BIRTHDAY_COLOR, selectedColor: '#fff' },
+        ],
+      };
     }
-  }
+
+    // Selected date
+    result[selectedDate] = {
+      ...(result[selectedDate] ?? {}),
+      selected: true,
+      selectedColor: colors.primary,
+      dots: result[selectedDate]?.dots ?? [],
+    };
+
+    // Week range dots
+    if (calView === 'week') {
+      for (let i = 0; i < 7; i++) {
+        const d = addDays(weekAnchor, i);
+        result[d] = {
+          ...(result[d] ?? {}),
+          dots: [
+            { key: 'apt', color: colors.primary, selectedColor: colors.onPrimary },
+            ...(result[d]?.dots?.filter((dot: any) => dot.key !== 'apt') ?? []),
+          ],
+        };
+      }
+    }
+
+    return result;
+  }, [birthdayMap, selectedDate, calView, weekAnchor, colors]);
 
   const appointments = calView === 'day' ? dayAppointments : undefined;
   const isLoading = calView === 'day' ? dayLoading : weekLoading;
@@ -230,8 +288,10 @@ export default function CalendarScreen() {
 
   function Timeline() {
     if (isLoading) return <ActivityIndicator style={styles.loader} color={colors.primary} />;
+    const birthdayClients = birthdayMap[selectedDate] ?? [];
     return (
       <ScrollView contentContainerStyle={styles.timeline}>
+        {birthdayClients.length > 0 && <BirthdayBanner clients={birthdayClients} />}
         {timeSlots.length > 0 ? (
           timeSlots.map((slot) => (
             <View key={slot} style={styles.slotRow}>
@@ -278,6 +338,14 @@ export default function CalendarScreen() {
                 </ThemedText>
               </View>
               <View style={styles.weekDayApts}>
+                {(birthdayMap[day] ?? []).length > 0 && (
+                  <View style={styles.weekBirthday}>
+                    <Ionicons name="gift-outline" size={11} color={BIRTHDAY_COLOR} />
+                    <ThemedText variant="caption" style={[styles.weekBirthdayText, { color: BIRTHDAY_COLOR }]} numberOfLines={1}>
+                      {(birthdayMap[day] ?? []).map((c) => c.name).join(', ')}
+                    </ThemedText>
+                  </View>
+                )}
                 {dayApts.length === 0 ? (
                   <ThemedText variant="caption" tone="tertiary" style={styles.weekEmpty}>—</ThemedText>
                 ) : (
@@ -312,6 +380,7 @@ export default function CalendarScreen() {
       current={calView === 'week' ? weekAnchor : selectedDate}
       onDayPress={onDayPress}
       markedDates={markedDates}
+      markingType="multi-dot"
       style={styles.calendar}
     />
   );
@@ -513,4 +582,12 @@ const styles = StyleSheet.create({
   blockService: { marginTop: 1, opacity: 0.75 },
   empty: { alignItems: 'center', paddingTop: 48, gap: 12 },
   emptyText: { fontSize: 15 },
+  birthdayBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FCE4EC', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4,
+  },
+  birthdayText: { fontSize: 13, fontWeight: '600', flex: 1 },
+  weekBirthday: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  weekBirthdayText: { fontSize: 11, fontWeight: '600' },
 });

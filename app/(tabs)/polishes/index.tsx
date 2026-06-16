@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  View, FlatList, TouchableOpacity, StyleSheet,
+  View, FlatList, TouchableOpacity, StyleSheet, Text,
   ActivityIndicator, Image, TextInput,
   ScrollView,
   Modal,
@@ -13,14 +14,18 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedDropdown } from '@/components/ui/ThemedDropdown';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { usePolishes, useDeletePolish, useMovePolish } from '@/hooks/usePolishes';
+import { usePolishes, useDeletePolish, useMovePolish, POLISHES_KEY } from '@/hooks/usePolishes';
 import { usePolishBrands } from '@/hooks/usePolishBrands';
 import { useNailRacks } from '@/hooks/useNailRacks';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
+import { SwipeToDismissModal } from '@/components/ui/SwipeToDismissModal';
+import { PolishDetailModal } from '@/components/ui/PolishDetailModal';
 import { useConfirm } from '@/context/ConfirmContext';
+import { useDrawingPad } from '@/context/DrawingPadContext';
 import { usePolishLabels } from '@/context/PolishLabelsContext';
+import { PolishEffectOverlay } from '@/components/ui/PolishEffectOverlay';
 import type { NailPolish, PolishBrand, NailRack } from '@/types/database.types';
 
 const MIN_CARD_WIDTH = 130;
@@ -176,10 +181,11 @@ function PolishListItem({ polish, rackName, onPress, onLongPress }: {
   );
 }
 
-function NailSwatch({ polish, onPress, onLongPress }: {
+function NailSwatch({ polish, onPress, onLongPress, moveMode }: {
   polish: NailPolish;
   onPress: () => void;
   onLongPress: () => void;
+  moveMode?: boolean;
 }) {
   const { colors } = useTheme();
   const swatchColor = polish.hex_color ?? colors.primaryMuted;
@@ -191,14 +197,31 @@ function NailSwatch({ polish, onPress, onLongPress }: {
     <TouchableOpacity
       onPress={onPress}
       onLongPress={onLongPress}
+      delayLongPress={400}
       activeOpacity={0.75}
       style={styles.swatchWrapper}
     >
       <View style={[styles.nail, { backgroundColor: swatchColor, shadowColor: swatchColor }]}>
-        <View style={[styles.nailShine, { backgroundColor: isLight ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)' }]} />
+        {polish.effect ? (
+          <PolishEffectOverlay effect={polish.effect} hexColor={polish.hex_color} />
+        ) : (
+          <View style={[styles.nailShine, { backgroundColor: isLight ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)' }]} />
+        )}
         {polish.stock <= 0 && (
           <View style={styles.outOfStockOverlay}>
             <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.9)" />
+          </View>
+        )}
+        {polish.rack_position != null && !moveMode && (
+          <View style={styles.positionBadgeContainer}>
+            <View style={styles.positionBadge}>
+              <Text style={styles.positionBadgeText}>{polish.rack_position}</Text>
+            </View>
+          </View>
+        )}
+        {moveMode && (
+          <View style={styles.moveModeOverlay}>
+            <Ionicons name="swap-vertical" size={13} color="rgba(255,255,255,0.95)" />
           </View>
         )}
       </View>
@@ -216,6 +239,11 @@ function SwatchSection({
   maxCapacity,
   onPress,
   showAllPositions,
+  moveMode,
+  movingPolish,
+  onSelectForMove,
+  onClearMove,
+  onLongPressEmptySlot,
 }: {
   rackName: string;
   rackId: string | null;
@@ -223,16 +251,22 @@ function SwatchSection({
   maxCapacity: number | null;
   onPress: (polish: NailPolish) => void;
   showAllPositions: boolean;
+  moveMode: boolean;
+  movingPolish: NailPolish | null;
+  onSelectForMove: (polish: NailPolish) => void;
+  onClearMove: () => void;
+  onLongPressEmptySlot: (position: number) => void;
 }) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const movePolish = useMovePolish();
   const { showToast } = useToast();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { showConfirm } = useConfirm();
+  const qc = useQueryClient();
 
-  const selectedPolish = selectedId ? polishes.find((p) => p.id === selectedId) ?? null : null;
+  // The moving polish is "active" in this section when it originates here
+  const isMovingFromHere = movingPolish?.rack_id === rackId;
 
-  // Positions already occupied in this rack
   const occupiedMap = useMemo(() => {
     const m = new Map<number, NailPolish>();
     for (const p of polishes) {
@@ -241,7 +275,15 @@ function SwatchSection({
     return m;
   }, [polishes]);
 
-  // Slot range to display in move mode or showAllPositions
+  // Always show slots up to the highest occupied position (natural gaps)
+  const naturalSlots = useMemo(() => {
+    const occupiedPositions = [...occupiedMap.keys()];
+    const max = occupiedPositions.length > 0 ? Math.max(...occupiedPositions) : 0;
+    if (max <= 0) return [];
+    return Array.from({ length: max }, (_, i) => i + 1);
+  }, [occupiedMap]);
+
+  // With showAllPositions: extend to maxCapacity
   const allSlots = useMemo(() => {
     const occupiedPositions = [...occupiedMap.keys()];
     const max = maxCapacity ?? (occupiedPositions.length > 0 ? Math.max(...occupiedPositions) : 0);
@@ -250,31 +292,70 @@ function SwatchSection({
   }, [maxCapacity, occupiedMap]);
 
   const moveSlots = useMemo(() => {
-    if (!selectedPolish) return [];
-    return allSlots.length > 0 ? allSlots : Array.from({ length: Math.max(Math.max(...occupiedMap.keys(), 0) + 2, 5) }, (_, i) => i + 1);
-  }, [selectedPolish, allSlots, occupiedMap]);
+    if (!movingPolish) return [];
+    return allSlots.length > 0
+      ? allSlots
+      : Array.from({ length: Math.max(Math.max(...occupiedMap.keys(), 0) + 2, 5) }, (_, i) => i + 1);
+  }, [movingPolish, allSlots, occupiedMap]);
 
   async function handleSlotPress(position: number) {
-    if (!selectedPolish || !rackId) return;
+    if (!movingPolish || !rackId) return;
+
     const occupant = occupiedMap.get(position);
-    if (occupant?.id === selectedPolish.id) {
-      setSelectedId(null);
+
+    // Tap the moving polish's own current slot → deselect
+    if (occupant?.id === movingPolish.id) {
+      onClearMove();
       return;
     }
-    try {
-      await movePolish.mutateAsync({
-        polishId: selectedPolish.id,
-        targetPosition: position,
-        rackId,
-        occupantId: occupant?.id,
-        occupantCurrentPosition: selectedPolish.rack_position,
+
+    const sourceHasPosition = movingPolish.rack_position != null;
+
+    async function doMove() {
+      try {
+        await movePolish.mutateAsync({
+          polishId: movingPolish!.id,
+          targetPosition: position,
+          rackId,
+          occupantId: occupant?.id,
+          occupantCurrentPosition: sourceHasPosition ? movingPolish!.rack_position : undefined,
+          occupantRackId: movingPolish!.rack_id,
+        });
+        onClearMove();
+        showToast(t('polishes.position.moved'));
+      } catch {
+        qc.invalidateQueries({ queryKey: POLISHES_KEY });
+        showToast(t('common.error'));
+      }
+    }
+
+    if (occupant && !sourceHasPosition) {
+      // A has no position to give B — B will lose its position
+      showConfirm({
+        title: t('polishes.position.displaceTitle'),
+        message: t('polishes.position.displaceMessage')
+          .replace('{a}', movingPolish.color_name)
+          .replace('{b}', occupant.color_name),
+        confirmLabel: t('polishes.position.displaceConfirm'),
+        onConfirm: doMove,
       });
-      setSelectedId(null);
-      showToast(t('polishes.position.moved'));
-    } catch {
-      showToast(t('common.error'));
+    } else if (occupant) {
+      // Both have positions — show swap confirm regardless of same/cross rack
+      showConfirm({
+        title: t('polishes.position.swapTitle'),
+        message: t('polishes.position.swapMessage')
+          .replace('{a}', movingPolish.color_name)
+          .replace('{b}', occupant.color_name),
+        confirmLabel: t('polishes.position.swapConfirm'),
+        onConfirm: doMove,
+      });
+    } else {
+      // Empty slot — move directly
+      await doMove();
     }
   }
+
+  const showMoveSlots = !!movingPolish;
 
   return (
     <View style={[styles.swatchSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -282,26 +363,28 @@ function SwatchSection({
         <ThemedText variant="sectionTitle">{rackName}</ThemedText>
         <View style={styles.swatchSectionRight}>
           <ThemedText variant="caption" tone="tertiary">{`${polishes.length} ${t('tabs.polishes').toLowerCase()}`}</ThemedText>
-          {selectedId ? (
-            <TouchableOpacity onPress={() => setSelectedId(null)} hitSlop={8}>
+          {isMovingFromHere && movingPolish ? (
+            <TouchableOpacity onPress={onClearMove} hitSlop={8}>
               <ThemedText variant="caption" tone="primary">{t('common.cancel')}</ThemedText>
             </TouchableOpacity>
           ) : null}
         </View>
       </View>
 
-      {selectedPolish ? (
+      {showMoveSlots ? (
         <>
-          <View style={[styles.moveBanner, { backgroundColor: colors.primaryMuted, borderColor: colors.primary }]}>
-            <Ionicons name="move-outline" size={14} color={colors.primary} />
-            <ThemedText variant="caption" tone="primary">
-              {`${selectedPolish.color_name} · ${t('polishes.position.selectTarget')}`}
-            </ThemedText>
-          </View>
+          {isMovingFromHere && (
+            <View style={[styles.moveBanner, { backgroundColor: colors.primaryMuted, borderColor: colors.primary }]}>
+              <Ionicons name="move-outline" size={14} color={colors.primary} />
+              <ThemedText variant="caption" tone="primary">
+                {`${movingPolish.color_name} · ${t('polishes.position.selectTarget')}`}
+              </ThemedText>
+            </View>
+          )}
           <View style={styles.swatchGrid}>
             {moveSlots.map((pos) => {
               const occupant = occupiedMap.get(pos);
-              const isSelf = occupant?.id === selectedPolish.id;
+              const isSelf = occupant?.id === movingPolish.id;
               const isOccupied = !!occupant && !isSelf;
               return (
                 <TouchableOpacity
@@ -321,7 +404,11 @@ function SwatchSection({
                   {occupant ? (
                     <>
                       <View style={[styles.nail, { backgroundColor: occupant.hex_color ?? colors.primaryMuted, shadowColor: occupant.hex_color ?? colors.primaryMuted }]}>
-                        <View style={styles.nailShine} />
+                        {occupant.effect ? (
+                          <PolishEffectOverlay effect={occupant.effect} hexColor={occupant.hex_color} />
+                        ) : (
+                          <View style={styles.nailShine} />
+                        )}
                         {isSelf ? (
                           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 10, alignItems: 'center', justifyContent: 'center' }]}>
                             <Ionicons name="hand-right-outline" size={14} color="#fff" />
@@ -343,35 +430,41 @@ function SwatchSection({
             })}
           </View>
         </>
-      ) : showAllPositions && allSlots.length > 0 ? (
+      ) : (
         <View style={styles.swatchGrid}>
-          {allSlots.map((pos) => {
+          {(showAllPositions ? allSlots : naturalSlots).map((pos) => {
             const polish = occupiedMap.get(pos);
             return polish ? (
               <NailSwatch
                 key={pos}
                 polish={polish}
-                onPress={() => onPress(polish)}
-                onLongPress={() => setSelectedId(polish.id)}
+                onPress={() => moveMode ? onSelectForMove(polish) : onPress(polish)}
+                onLongPress={() => onSelectForMove(polish)}
+                moveMode={moveMode}
               />
             ) : (
-              <View key={pos} style={[styles.swatchWrapper]}>
+              <TouchableOpacity
+                key={pos}
+                style={styles.swatchWrapper}
+                onPress={() => {}}
+                onLongPress={() => onLongPressEmptySlot(pos)}
+                activeOpacity={0.7}
+                delayLongPress={400}
+              >
                 <View style={[styles.nail, styles.emptySlotNail, { borderColor: colors.border }]}>
                   <ThemedText style={{ fontSize: 11, color: colors.textTertiary, fontWeight: '600' }}>{pos}</ThemedText>
                 </View>
                 <ThemedText variant="caption" tone="tertiary" style={styles.swatchCode}>{'–'}</ThemedText>
-              </View>
+              </TouchableOpacity>
             );
           })}
-        </View>
-      ) : (
-        <View style={styles.swatchGrid}>
-          {polishes.map((polish) => (
+          {!showAllPositions && polishes.filter(p => p.rack_position == null).map((polish) => (
             <NailSwatch
               key={polish.id}
               polish={polish}
-              onPress={() => onPress(polish)}
-              onLongPress={() => setSelectedId(polish.id)}
+              onPress={() => moveMode ? onSelectForMove(polish) : onPress(polish)}
+              onLongPress={() => onSelectForMove(polish)}
+              moveMode={moveMode}
             />
           ))}
         </View>
@@ -447,27 +540,28 @@ function PolishFiltersModal({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.filtersModalBackdrop}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.filtersModalSheet, { backgroundColor: colors.background }]}>
-          <ScreenHeader
-            leadingLabel={t('common.cancel')}
-            onLeadingPress={onClose}
-            title={t('polishes.filtersTitle')}
-            trailingLabel={t('common.apply')}
-            onTrailingPress={() => {
-              onApply(draft);
-              onClose();
-            }}
-          />
-
-          <ScrollView contentContainerStyle={styles.filtersContent} keyboardShouldPersistTaps="handled">
-            <ThemedDropdown
-              label={t('polishes.filter.brand')}
-              value={draft.brandId}
-              options={brandOptions}
-              onChange={(value) => updateDraft('brandId', value)}
-              placeholder={t('polishes.filter.allBrands')}
-              stackOrder={70}
+        <SwipeToDismissModal onDismiss={onClose} containerStyle={styles.filtersSwipeSurface}>
+          <View style={[styles.filtersModalSheet, { backgroundColor: colors.background }]}> 
+            <ScreenHeader
+              leadingLabel={t('common.cancel')}
+              onLeadingPress={onClose}
+              title={t('polishes.filtersTitle')}
+              trailingLabel={t('common.apply')}
+              onTrailingPress={() => {
+                onApply(draft);
+                onClose();
+              }}
             />
+
+            <ScrollView contentContainerStyle={styles.filtersContent} keyboardShouldPersistTaps="handled">
+              <ThemedDropdown
+                label={t('polishes.filter.brand')}
+                value={draft.brandId}
+                options={brandOptions}
+                onChange={(value) => updateDraft('brandId', value)}
+                placeholder={t('polishes.filter.allBrands')}
+                stackOrder={70}
+              />
 
             <ThemedDropdown
               label={t('polishes.filter.rack')}
@@ -520,14 +614,15 @@ function PolishFiltersModal({
               stackOrder={10}
             />
 
-            <ThemedButton
-              label={t('polishes.clearFilters')}
-              variant="ghost"
-              onPress={() => setDraft(DEFAULT_POLISH_FILTERS)}
-              style={styles.clearFiltersButton}
-            />
-          </ScrollView>
-        </View>
+              <ThemedButton
+                label={t('polishes.clearFilters')}
+                variant="ghost"
+                onPress={() => setDraft(DEFAULT_POLISH_FILTERS)}
+                style={styles.clearFiltersButton}
+              />
+            </ScrollView>
+          </View>
+        </SwipeToDismissModal>
       </View>
     </Modal>
   );
@@ -546,7 +641,15 @@ export default function PolishesScreen() {
   const [viewMode, setViewMode] = useState<PolishViewMode>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<PolishFilterState>(DEFAULT_POLISH_FILTERS);
-  const [showAllPositions, setShowAllPositions] = useState(false);
+  const [selectedPolishId, setSelectedPolishId] = useState<string | null>(null);
+  const [moveMode, setMoveMode] = useState(false);
+  const [movingPolish, setMovingPolish] = useState<NailPolish | null>(null);
+
+  useEffect(() => {
+    if (!moveMode) setMovingPolish(null);
+  }, [moveMode]);
+  const [selectedRackId, setSelectedRackId] = useState('');
+  const { showEmptyPositions: showAllPositions, setShowEmptyPositions: setShowAllPositions } = useDrawingPad();
   const { width } = useWindowDimensions();
   const gridColumns = Math.max(2, Math.floor(width / MIN_CARD_WIDTH));
   const { colors } = useTheme();
@@ -636,6 +739,10 @@ export default function PolishesScreen() {
     }))
     .sort((left, right) => left.label.localeCompare(right.label, undefined, { sensitivity: 'base' }));
 
+  const visibleRackSections = selectedRackId === ''
+    ? rackSections
+    : rackSections.filter((s) => s.rackId === selectedRackId);
+
   function handleLongPress(p: NailPolish) {
     showConfirm({
       title: p.color_name,
@@ -696,16 +803,42 @@ export default function PolishesScreen() {
         </View>
 
         {viewMode === 'swatch' ? (
-          <TouchableOpacity
-            style={[styles.allPositionsToggle, { borderColor: showAllPositions ? colors.primary : colors.border, backgroundColor: showAllPositions ? colors.primaryMuted : colors.inputBackground }]}
-            onPress={() => setShowAllPositions((v) => !v)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name={showAllPositions ? 'eye' : 'eye-outline'} size={14} color={showAllPositions ? colors.primary : colors.textSecondary} />
-            <ThemedText variant="caption" tone={showAllPositions ? 'primary' : 'secondary'} style={styles.allPositionsLabel}>
-              {t('polishes.swatch.showAllPositions')}
-            </ThemedText>
-          </TouchableOpacity>
+          <>
+            <View style={styles.swatchTogglesRow}>
+              <TouchableOpacity
+                style={[styles.allPositionsToggle, { borderColor: showAllPositions ? colors.primary : colors.border, backgroundColor: showAllPositions ? colors.primaryMuted : colors.inputBackground }]}
+                onPress={() => setShowAllPositions(!showAllPositions)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name={showAllPositions ? 'eye' : 'eye-outline'} size={14} color={showAllPositions ? colors.primary : colors.textSecondary} />
+                <ThemedText variant="caption" tone={showAllPositions ? 'primary' : 'secondary'} style={styles.allPositionsLabel}>
+                  {t('polishes.swatch.showAllPositions')}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.allPositionsToggle, { borderColor: moveMode ? colors.primary : colors.border, backgroundColor: moveMode ? colors.primaryMuted : colors.inputBackground }]}
+                onPress={() => setMoveMode(!moveMode)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="swap-vertical-outline" size={14} color={moveMode ? colors.primary : colors.textSecondary} />
+                <ThemedText variant="caption" tone={moveMode ? 'primary' : 'secondary'} style={styles.allPositionsLabel}>
+                  {t('polishes.swatch.moveMode')}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+            {racks.length > 1 ? (
+              <View style={styles.rackDropdown}>
+                <ThemedDropdown
+                  value={selectedRackId}
+                  options={[
+                    { value: '', label: t('polishes.filter.allRacks') },
+                    ...racks.map((r) => ({ value: r.id, label: r.name })),
+                  ]}
+                  onChange={setSelectedRackId}
+                />
+              </View>
+            ) : null}
+          </>
         ) : null}
       </View>
 
@@ -713,16 +846,24 @@ export default function PolishesScreen() {
         <ActivityIndicator style={styles.loader} color={colors.primary} />
       ) : viewMode === 'swatch' ? (
         <ScrollView contentContainerStyle={styles.swatchSectionsContent}>
-          {rackSections.length ? (
-            rackSections.map((section) => (
+
+          {visibleRackSections.length ? (
+            visibleRackSections.map((section) => (
               <SwatchSection
                 key={section.key}
                 rackName={section.label}
                 rackId={section.rackId}
                 maxCapacity={section.maxCapacity}
                 polishes={section.polishes}
-                onPress={(polish) => router.push({ pathname: '/polishes/[id]' as any, params: { id: polish.id } })}
+                onPress={(polish) => setSelectedPolishId(polish.id)}
                 showAllPositions={showAllPositions}
+                moveMode={moveMode}
+                movingPolish={movingPolish}
+                onSelectForMove={(polish) => { setMovingPolish(polish); setMoveMode(true); }}
+                onClearMove={() => setMovingPolish(null)}
+                onLongPressEmptySlot={(position) =>
+                  router.push({ pathname: '/polishes/new' as any, params: { rackId: section.rackId ?? '', position: String(position) } })
+                }
               />
             ))
           ) : (
@@ -747,14 +888,14 @@ export default function PolishesScreen() {
               <PolishCard
                 polish={item}
                 rackName={item.rack_id ? rackMap.get(item.rack_id) : undefined}
-                onPress={() => router.push({ pathname: '/polishes/[id]' as any, params: { id: item.id } })}
+                onPress={() => setSelectedPolishId(item.id)}
                 onLongPress={() => handleLongPress(item)}
               />
             ) : (
               <PolishListItem
                 polish={item}
                 rackName={item.rack_id ? rackMap.get(item.rack_id) : undefined}
-                onPress={() => router.push({ pathname: '/polishes/[id]' as any, params: { id: item.id } })}
+                onPress={() => setSelectedPolishId(item.id)}
                 onLongPress={() => handleLongPress(item)}
               />
             )
@@ -777,6 +918,11 @@ export default function PolishesScreen() {
         racks={racks}
         initialState={filters}
         onApply={setFilters}
+      />
+
+      <PolishDetailModal
+        polishId={selectedPolishId}
+        onClose={() => setSelectedPolishId(null)}
       />
     </SafeAreaView>
   );
@@ -838,12 +984,20 @@ const styles = StyleSheet.create({
   viewButtonLabel: {
     fontWeight: '600',
   },
+  swatchTogglesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  rackDropdown: {
+    marginTop: 10,
+  },
   allPositionsToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 6,
-    marginTop: 10,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 10,
@@ -967,6 +1121,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  positionBadgeContainer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  positionBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  positionBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
+  },
+  moveModeOverlay: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   swatchCode: {
     fontSize: 10,
     fontWeight: '600',
@@ -1007,6 +1192,10 @@ const styles = StyleSheet.create({
   filtersModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.22)',
+    justifyContent: 'flex-end',
+  },
+  filtersSwipeSurface: {
+    flex: 1,
     justifyContent: 'flex-end',
   },
   filtersModalSheet: {

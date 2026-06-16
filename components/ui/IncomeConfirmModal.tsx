@@ -8,6 +8,7 @@ import { useI18n } from '@/context/I18nContext';
 import { useCurrency } from '@/context/CurrencyContext';
 import { ThemedText } from './ThemedText';
 import { ThemedInput } from './ThemedInput';
+import { SwipeToDismissModal } from './SwipeToDismissModal';
 
 interface IncomeConfirmModalProps {
   visible: boolean;
@@ -24,7 +25,7 @@ export function IncomeConfirmModal({
 }: IncomeConfirmModalProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { symbol } = useCurrency();
+  const { symbol, parseAmountInput } = useCurrency();
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,8 +38,8 @@ export function IncomeConfirmModal({
   }, [visible, suggestedAmount]);
 
   async function handleConfirm() {
-    const parsed = parseFloat(amount.replace(',', '.'));
-    if (isNaN(parsed) || parsed <= 0) return;
+    const parsed = parseAmountInput(amount);
+    if (!parsed || parsed <= 0) return;
     setLoading(true);
     try {
       await onConfirm(parsed, notes.trim());
@@ -47,8 +48,8 @@ export function IncomeConfirmModal({
     }
   }
 
-  const parsedAmount = parseFloat(amount.replace(',', '.'));
-  const canConfirm = !isNaN(parsedAmount) && parsedAmount > 0;
+  const parsedAmount = parseAmountInput(amount);
+  const canConfirm = parsedAmount > 0;
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']} onRequestClose={onSkip}>
@@ -58,55 +59,57 @@ export function IncomeConfirmModal({
       >
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onSkip} />
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[styles.iconRow, { backgroundColor: colors.primaryMuted }]}>
-            <ThemedText style={styles.icon}>💰</ThemedText>
+        <SwipeToDismissModal onDismiss={onSkip} containerStyle={styles.confirmSwipeSurface}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+            <View style={[styles.iconRow, { backgroundColor: colors.primaryMuted }]}> 
+              <ThemedText style={styles.icon}>💰</ThemedText>
+            </View>
+
+            <ThemedText variant="subtitle" style={styles.title}>{t('incomes.confirm.title')}</ThemedText>
+            <ThemedText tone="secondary" style={styles.subtitle}>{t('incomes.confirm.subtitle')}</ThemedText>
+
+            <ThemedInput
+              placeholder={`${t('incomes.confirm.amount')} (${symbol})`}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="decimal-pad"
+              style={[styles.input, { borderColor: colors.border }]}
+            />
+            <ThemedInput
+              placeholder={t('incomes.confirm.notes')}
+              value={notes}
+              onChangeText={setNotes}
+              style={[styles.input, { borderColor: colors.border }]}
+            />
+
+            <View style={styles.buttons}>
+              <TouchableOpacity
+                style={[styles.btn, styles.btnSkip, { borderColor: colors.border }]}
+                onPress={onSkip}
+                disabled={loading}
+              >
+                <ThemedText tone="secondary">{t('incomes.confirm.skip')}</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.btn, styles.btnConfirm,
+                  { backgroundColor: canConfirm ? colors.primary : colors.primaryMuted },
+                ]}
+                onPress={handleConfirm}
+                disabled={!canConfirm || loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.onPrimary} size="small" />
+                ) : (
+                  <ThemedText style={{ color: colors.onPrimary, fontWeight: '600' }}>
+                    {t('incomes.confirm.register')}
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
-
-          <ThemedText variant="subtitle" style={styles.title}>{t('incomes.confirm.title')}</ThemedText>
-          <ThemedText tone="secondary" style={styles.subtitle}>{t('incomes.confirm.subtitle')}</ThemedText>
-
-          <ThemedInput
-            placeholder={`${t('incomes.confirm.amount')} (${symbol})`}
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="decimal-pad"
-            style={[styles.input, { borderColor: colors.border }]}
-          />
-          <ThemedInput
-            placeholder={t('incomes.confirm.notes')}
-            value={notes}
-            onChangeText={setNotes}
-            style={[styles.input, { borderColor: colors.border }]}
-          />
-
-          <View style={styles.buttons}>
-            <TouchableOpacity
-              style={[styles.btn, styles.btnSkip, { borderColor: colors.border }]}
-              onPress={onSkip}
-              disabled={loading}
-            >
-              <ThemedText tone="secondary">{t('incomes.confirm.skip')}</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.btn, styles.btnConfirm,
-                { backgroundColor: canConfirm ? colors.primary : colors.primaryMuted },
-              ]}
-              onPress={handleConfirm}
-              disabled={!canConfirm || loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.onPrimary} size="small" />
-              ) : (
-                <ThemedText style={{ color: colors.onPrimary, fontWeight: '600' }}>
-                  {t('incomes.confirm.register')}
-                </ThemedText>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
+        </SwipeToDismissModal>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -119,6 +122,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+  },
+  confirmSwipeSurface: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
     width: '100%',

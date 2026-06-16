@@ -12,7 +12,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
 import { useConfirm } from '@/context/ConfirmContext';
+import { useError } from '@/context/ErrorContext';
 import { ThemedText } from './ThemedText';
+import { SwipeToDismissModal } from './SwipeToDismissModal';
 
 interface PhotoPreviewModalProps {
   visible: boolean;
@@ -28,6 +30,7 @@ export function PhotoPreviewModal({ visible, uri, onClose, onChangePhoto, onRemo
   const { colors } = useTheme();
   const { t } = useI18n();
   const { showToast } = useToast();
+  const { showError } = useError();
   const { showConfirm } = useConfirm();
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -43,22 +46,22 @@ export function PhotoPreviewModal({ visible, uri, onClose, onChangePhoto, onRemo
   async function handleSave() {
     setSaving(true);
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        showToast(t('appointment.photo.permissionDenied'), 'error');
+      const { status } = await MediaLibrary.requestPermissionsAsync(false, ['photo']);
+      if (status !== 'granted' && (status as string) !== 'limited') {
+        showError(t('appointment.photo.permissionDenied'));
         return;
       }
-      const webpUri = await downloadToTemp();
-      // iOS can't save WebP to the photo library — convert to JPEG first
+      const localUri = await downloadToTemp();
       const jpeg = await ImageManipulator.manipulateAsync(
-        webpUri,
+        localUri,
         [],
         { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG }
       );
       await MediaLibrary.saveToLibraryAsync(jpeg.uri);
       showToast(t('appointment.photo.savedToGallery'), 'success');
     } catch (e) {
-      showToast(t('common.error'), 'error');
+      console.error('[PhotoPreviewModal] handleSave error:', e);
+      showError(t('common.error'));
     } finally {
       setSaving(false);
     }
@@ -70,7 +73,7 @@ export function PhotoPreviewModal({ visible, uri, onClose, onChangePhoto, onRemo
       const localUri = await downloadToTemp();
       await Sharing.shareAsync(localUri, { mimeType: 'image/webp' });
     } catch {
-      showToast(t('common.error'), 'error');
+      showError(t('common.error'));
     } finally {
       setSharing(false);
     }
@@ -95,53 +98,55 @@ export function PhotoPreviewModal({ visible, uri, onClose, onChangePhoto, onRemo
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']} onRequestClose={onClose}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       <View style={styles.backdrop}>
-        <Image source={{ uri }} style={styles.image} resizeMode="contain" />
+        <SwipeToDismissModal onDismiss={onClose} containerStyle={styles.previewSwipeSurface}>
+          <Image source={{ uri }} style={styles.image} resizeMode="contain" />
 
-        <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={12}>
-          <Ionicons name="close" size={26} color="#fff" />
-        </TouchableOpacity>
-
-        <View style={[styles.actions, { backgroundColor: 'rgba(0,0,0,0.55)' }]}>
-          {onChangePhoto ? (
-            <>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => onChangePhoto()} disabled={busy}>
-                <Ionicons name="camera-outline" size={24} color="#fff" />
-                <ThemedText style={styles.actionLabel}>{t('photo.change')}</ThemedText>
-              </TouchableOpacity>
-              <View style={styles.actionDivider} />
-            </>
-          ) : null}
-
-          <TouchableOpacity style={styles.actionBtn} onPress={handleSave} disabled={busy}>
-            {saving ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Ionicons name="download-outline" size={24} color="#fff" />
-            )}
-            <ThemedText style={styles.actionLabel}>{t('appointment.photo.save')}</ThemedText>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={12}>
+            <Ionicons name="close" size={26} color="#fff" />
           </TouchableOpacity>
 
-          <View style={styles.actionDivider} />
+          <View style={[styles.actions, { backgroundColor: 'rgba(0,0,0,0.55)' }]}>
+            {onChangePhoto ? (
+              <>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => onChangePhoto()} disabled={busy}>
+                  <Ionicons name="camera-outline" size={24} color="#fff" />
+                  <ThemedText style={styles.actionLabel}>{t('photo.change')}</ThemedText>
+                </TouchableOpacity>
+                <View style={styles.actionDivider} />
+              </>
+            ) : null}
 
-          <TouchableOpacity style={styles.actionBtn} onPress={handleShare} disabled={busy}>
-            {sharing ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Ionicons name="share-outline" size={24} color="#fff" />
-            )}
-            <ThemedText style={styles.actionLabel}>{t('appointment.photo.share')}</ThemedText>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtn} onPress={handleSave} disabled={busy}>
+              {saving ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Ionicons name="download-outline" size={24} color="#fff" />
+              )}
+              <ThemedText style={styles.actionLabel}>{t('appointment.photo.save')}</ThemedText>
+            </TouchableOpacity>
 
-          {onRemove ? (
-            <>
-              <View style={styles.actionDivider} />
-              <TouchableOpacity style={styles.actionBtn} onPress={handleRemove} disabled={busy}>
-                <Ionicons name="trash-outline" size={24} color="#ff6b6b" />
-                <ThemedText style={[styles.actionLabel, styles.actionLabelDanger]}>{t('photo.remove.ok')}</ThemedText>
-              </TouchableOpacity>
-            </>
-          ) : null}
-        </View>
+            <View style={styles.actionDivider} />
+
+            <TouchableOpacity style={styles.actionBtn} onPress={handleShare} disabled={busy}>
+              {sharing ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Ionicons name="share-outline" size={24} color="#fff" />
+              )}
+              <ThemedText style={styles.actionLabel}>{t('appointment.photo.share')}</ThemedText>
+            </TouchableOpacity>
+
+            {onRemove ? (
+              <>
+                <View style={styles.actionDivider} />
+                <TouchableOpacity style={styles.actionBtn} onPress={handleRemove} disabled={busy}>
+                  <Ionicons name="trash-outline" size={24} color="#ff6b6b" />
+                  <ThemedText style={[styles.actionLabel, styles.actionLabelDanger]}>{t('photo.remove.ok')}</ThemedText>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        </SwipeToDismissModal>
       </View>
     </Modal>
   );
@@ -153,6 +158,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  previewSwipeSurface: {
+    flex: 1,
   },
   image: {
     width: SCREEN_W,
@@ -172,6 +180,7 @@ const styles = StyleSheet.create({
   actions: {
     position: 'absolute',
     bottom: 52,
+    alignSelf: 'center',
     flexDirection: 'row',
     borderRadius: 16,
     overflow: 'hidden',

@@ -176,3 +176,70 @@ Stored in `.env.local` (not committed). See `.env.example` for required keys:
 
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+---
+
+## Multi-tenancy (implementado)
+
+La app es multi-tenant desde la raíz. Cada dato pertenece a una `organization`.
+
+### Tablas clave
+
+| Tabla | Rol |
+| --- | --- |
+| `organizations` | Tenant raíz. `type: 'home_studio' \| 'salon'` |
+| `organization_members` | Liga `auth.users` ↔ `organizations` con `role: 'owner' \| 'member'` |
+
+### Cómo funciona el aislamiento
+
+- Función `get_my_org_id()` (SECURITY DEFINER): devuelve el `organization_id` del usuario autenticado consultando `organization_members`.
+- Todas las tablas de datos (`clients`, `appointments`, `nail_polishes`, `services`, etc.) tienen `organization_id` y políticas RLS que usan `get_my_org_id()`.
+- `OrganizationContext` (`context/OrganizationContext.tsx`) resuelve la org al hacer login y la provee a toda la app vía `useOrganization()`.
+- Todos los hooks (`useClients`, `usePolishes`, `useAppointments`, etc.) filtran por `organizationId` en queries e inserts.
+
+### Flujo de registro
+
+1. Usuario se registra (email + password)
+2. Sin organización → AuthGuard redirige a `/onboarding`
+3. Onboarding: elige tipo (Home Studio / Salón) + nombre del estudio + su nombre
+4. Se llama la función RPC `create_organization(org_name, org_type)` (SECURITY DEFINER) que crea `organizations` + `organization_members` atómicamente
+5. Se crea el perfil en `professionals` ligado al usuario y la org
+6. `OrganizationContext.refetch()` → AuthGuard redirige a `/(tabs)`
+
+---
+
+## Roadmap pendiente — Salón con múltiples profesionales
+
+El tipo `salon` solo admite un usuario (el owner). Las demás profesionales no pueden unirse a la misma organización.
+
+### Solución diseñada: sistema de invitaciones por código
+
+### Flujo propuesto
+
+```text
+Owner crea el salón
+  ↓
+Genera código de invitación (ej: GLOW-4821) desde Ajustes
+  ↓
+Profesional instala la app → en onboarding elige "Unirme a un salón"
+  ↓
+Ingresa el código → queda ligada a la misma org con role 'member'
+  ↓
+Entra con SU propio correo y ve los datos compartidos del salón
+```
+
+### Piezas a implementar
+
+| Pieza | Descripción |
+| --- | --- |
+| Tabla `org_invites` | `id, organization_id, code (unique), expires_at, max_uses, uses_count` |
+| RPC `join_organization(code TEXT)` | Valida el código y hace INSERT en `organization_members` |
+| Pantalla onboarding paso 1 | Agregar tercera opción: "Unirme a un salón existente" |
+| Pantalla "Invitar profesional" | En Ajustes (solo visible para owners de salón): genera y comparte el código |
+| RLS `org_invites` | Owner puede crear/ver, cualquier autenticado puede leer (para validar el código) |
+
+### Notas de diseño
+
+- Un usuario puede pertenecer a una sola org (LIMIT 1 en `get_my_org_id()`). Si en el futuro se necesita multi-org por usuario, se debe revisar esta función y el contexto.
+- Las citas y clientes en un salón son compartidos por toda la org. Si se necesita aislamiento por profesional dentro del salón (cada una ve solo sus citas), agregar `professional_id` como filtro opcional en los hooks.
+- El `professional_id` en `appointments` ya existe y apunta a `professionals.id`, que a su vez tiene `user_id`. Esto permite filtrar citas por profesional cuando sea necesario.

@@ -12,26 +12,82 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      professionals: {
+      organizations: {
         Row: {
           id: string;
           name: string;
-          email: string;
-          color: string;
+          type: 'home_studio' | 'salon';
+          owner_id: string;
           created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
-          email: string;
-          color?: string;
+          type: 'home_studio' | 'salon';
+          owner_id: string;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
-          email?: string;
+          type?: 'home_studio' | 'salon';
+          owner_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      organization_members: {
+        Row: {
+          organization_id: string;
+          user_id: string;
+          role: 'owner' | 'member';
+          created_at: string;
+        };
+        Insert: {
+          organization_id: string;
+          user_id: string;
+          role?: 'owner' | 'member';
+          created_at?: string;
+        };
+        Update: {
+          organization_id?: string;
+          user_id?: string;
+          role?: 'owner' | 'member';
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'organization_members_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      professionals: {
+        Row: {
+          id: string;
+          name: string;
+          color: string;
+          user_id: string | null;
+          organization_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
           color?: string;
+          user_id?: string | null;
+          organization_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          color?: string;
+          user_id?: string | null;
+          organization_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -43,6 +99,8 @@ export interface Database {
           phone: string | null;
           notes: string | null;
           allergies: string | null;
+          birthday: string | null; // 'YYYY-MM-DD'
+          organization_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -51,6 +109,8 @@ export interface Database {
           phone?: string | null;
           notes?: string | null;
           allergies?: string | null;
+          birthday?: string | null;
+          organization_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -59,6 +119,8 @@ export interface Database {
           phone?: string | null;
           notes?: string | null;
           allergies?: string | null;
+          birthday?: string | null;
+          organization_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -70,6 +132,7 @@ export interface Database {
           duration: number;
           price: number | null;
           photo_url: string | null;
+          organization_id: string | null;
         };
         Insert: {
           id?: string;
@@ -77,6 +140,7 @@ export interface Database {
           duration?: number;
           price?: number | null;
           photo_url?: string | null;
+          organization_id?: string | null;
         };
         Update: {
           id?: string;
@@ -84,6 +148,7 @@ export interface Database {
           duration?: number;
           price?: number | null;
           photo_url?: string | null;
+          organization_id?: string | null;
         };
         Relationships: [];
       };
@@ -94,6 +159,7 @@ export interface Database {
           amount: number;
           notes: string | null;
           date: string;
+          organization_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -102,6 +168,7 @@ export interface Database {
           amount: number;
           notes?: string | null;
           date?: string;
+          organization_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -110,6 +177,7 @@ export interface Database {
           amount?: number;
           notes?: string | null;
           date?: string;
+          organization_id?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -126,16 +194,19 @@ export interface Database {
         Row: {
           id: string;
           name: string;
+          organization_id: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
+          organization_id?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
+          organization_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -146,6 +217,7 @@ export interface Database {
           key: string;
           label: string;
           sort_order: number;
+          organization_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -153,6 +225,7 @@ export interface Database {
           key: string;
           label: string;
           sort_order?: number;
+          organization_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -160,6 +233,7 @@ export interface Database {
           key?: string;
           label?: string;
           sort_order?: number;
+          organization_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -170,6 +244,7 @@ export interface Database {
           key: string;
           label: string;
           sort_order: number;
+          organization_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -177,6 +252,7 @@ export interface Database {
           key: string;
           label: string;
           sort_order?: number;
+          organization_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -184,6 +260,7 @@ export interface Database {
           key?: string;
           label?: string;
           sort_order?: number;
+          organization_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -193,18 +270,21 @@ export interface Database {
           id: string;
           name: string;
           max_capacity: number | null;
+          organization_id: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
           max_capacity?: number | null;
+          organization_id?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
           max_capacity?: number | null;
+          organization_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -221,6 +301,7 @@ export interface Database {
           status: 'pending' | 'completed' | 'cancelled';
           design_photo_url: string | null;
           google_event_id: string | null;
+          organization_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -234,6 +315,7 @@ export interface Database {
           status?: 'pending' | 'completed' | 'cancelled';
           design_photo_url?: string | null;
           google_event_id?: string | null;
+          organization_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -247,6 +329,7 @@ export interface Database {
           status?: 'pending' | 'completed' | 'cancelled';
           design_photo_url?: string | null;
           google_event_id?: string | null;
+          organization_id?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -285,9 +368,11 @@ export interface Database {
           hex_color: string | null;
           base_color: string | null;
           tone_family: string | null;
+          effect: 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | null;
           photo_url: string | null;
           stock: number;
           notes: string | null;
+          organization_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -301,9 +386,11 @@ export interface Database {
           hex_color?: string | null;
           base_color?: string | null;
           tone_family?: string | null;
+          effect?: 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | null;
           photo_url?: string | null;
           stock?: number;
           notes?: string | null;
+          organization_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -317,9 +404,11 @@ export interface Database {
           hex_color?: string | null;
           base_color?: string | null;
           tone_family?: string | null;
+          effect?: 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | null;
           photo_url?: string | null;
           stock?: number;
           notes?: string | null;
+          organization_id?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -416,6 +505,8 @@ export type TablesInsert<T extends keyof Database['public']['Tables']> =
 export type TablesUpdate<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Update'];
 
+export type Organization = Tables<'organizations'>;
+export type OrganizationMember = Tables<'organization_members'>;
 export type Professional = Tables<'professionals'>;
 export type Client = Tables<'clients'>;
 export type Service = Tables<'services'>;
@@ -427,6 +518,7 @@ export type Income = Tables<'incomes'>;
 export type PolishBaseColor = Tables<'polish_base_colors'>;
 export type PolishToneFamily = Tables<'polish_tone_families'>;
 
+export type OrgType = 'home_studio' | 'salon';
 export type AppointmentStatus = 'pending' | 'completed' | 'cancelled';
 
 export type AppointmentPolishSummary = Pick<NailPolish, 'id' | 'color_name' | 'brand' | 'hex_color' | 'polish_code'>;

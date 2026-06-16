@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useTimeFormat } from '@/context/TimeFormatContext';
+import { SwipeToDismissModal } from '@/components/ui/SwipeToDismissModal';
 
 const ITEM_H = 48;
 const VISIBLE = 5; // items shown in the wheel at once
@@ -148,26 +149,30 @@ function PickerSheet({ open, title, onCancel, onConfirm, children }: PickerSheet
       </Animated.View>
 
       <View style={styles.dialogWrapper} pointerEvents="box-none">
-        <Animated.View
-          style={[
-            styles.dialog,
-            { backgroundColor: colors.card, borderColor: colors.border },
-            { transform: [{ scale }], opacity: backdropOpacity },
-          ]}
-        >
-          <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={onCancel} hitSlop={8} style={styles.toolbarBtn}>
-              <ThemedText tone="secondary">{t('common.cancel')}</ThemedText>
-            </TouchableOpacity>
-            <ThemedText variant="caption" tone="tertiary" style={styles.toolbarTitle}>
-              {title}
-            </ThemedText>
-            <TouchableOpacity onPress={onConfirm} hitSlop={8} style={styles.toolbarBtn}>
-              <ThemedText tone="primary" style={{ fontWeight: '700' }}>{t('common.done')}</ThemedText>
-            </TouchableOpacity>
-          </View>
-          {children}
-        </Animated.View>
+        <SwipeToDismissModal onDismiss={onCancel} containerStyle={styles.dialogSwipeSurface}>
+          <Animated.View
+            style={[
+              styles.dialog,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              { transform: [{ scale }], opacity: backdropOpacity },
+            ]}
+          >
+            <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
+              <ThemedText variant="caption" tone="tertiary" style={styles.toolbarTitle}>
+                {title}
+              </ThemedText>
+              <View style={styles.toolbarButtons}>
+                <TouchableOpacity onPress={onCancel} hitSlop={8} style={styles.toolbarBtn}>
+                  <ThemedText tone="secondary">{t('common.cancel')}</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onConfirm} hitSlop={8} style={styles.toolbarBtn}>
+                  <ThemedText tone="primary" style={{ fontWeight: '700' }}>{t('common.done')}</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+            {children}
+          </Animated.View>
+        </SwipeToDismissModal>
       </View>
     </Modal>
   );
@@ -375,6 +380,101 @@ export function TimePickerField({
   );
 }
 
+// ─── BirthdayPickerField ──────────────────────────────────────────────────────
+
+interface BirthdayPickerFieldProps {
+  label: string;
+  value: Date | null;
+  onChange: (date: Date) => void;
+  borderTop?: boolean;
+}
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: CURRENT_YEAR - 1919 }, (_, i) => String(CURRENT_YEAR - i));
+
+function daysInMonth(month: number, year: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+export function BirthdayPickerField({ label, value, onChange, borderTop }: BirthdayPickerFieldProps) {
+  const { lang } = useI18n();
+  const { colors } = useTheme();
+  const locale = lang === 'en' ? 'en-US' : 'es-ES';
+
+  const defaultDate = value ?? new Date(CURRENT_YEAR - 30, 0, 1);
+
+  const [open, setOpen] = useState(false);
+  const [stagedDay,   setStagedDay]   = useState(defaultDate.getDate());
+  const [stagedMonth, setStagedMonth] = useState(defaultDate.getMonth());
+  const [stagedYear,  setStagedYear]  = useState(defaultDate.getFullYear());
+
+  const months = Array.from({ length: 12 }, (_, i) =>
+    new Date(2000, i, 1).toLocaleDateString(locale, { month: 'long' })
+  );
+
+  const totalDays = daysInMonth(stagedMonth, stagedYear);
+  const days = Array.from({ length: totalDays }, (_, i) => String(i + 1).padStart(2, '0'));
+
+  useEffect(() => {
+    if (stagedDay > totalDays) setStagedDay(totalDays);
+  }, [stagedMonth, stagedYear, totalDays]);
+
+  function handleOpen() {
+    const d = value ?? new Date(CURRENT_YEAR - 30, 0, 1);
+    setStagedDay(d.getDate());
+    setStagedMonth(d.getMonth());
+    setStagedYear(d.getFullYear());
+    setOpen(true);
+  }
+
+  function handleConfirm() {
+    onChange(new Date(stagedYear, stagedMonth, Math.min(stagedDay, totalDays), 12, 0, 0));
+    setOpen(false);
+  }
+
+  const displayValue = value
+    ? value.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
+    : '—';
+
+  const yearIndex = YEARS.indexOf(String(stagedYear));
+
+  return (
+    <>
+      <PickerRow
+        label={label}
+        displayValue={displayValue}
+        icon="gift-outline"
+        onPress={handleOpen}
+        borderTop={borderTop}
+      />
+      <PickerSheet open={open} title={label} onCancel={() => setOpen(false)} onConfirm={handleConfirm}>
+        <View style={styles.birthdayWheel}>
+          <WheelColumn
+            items={days}
+            selectedIndex={Math.min(stagedDay - 1, days.length - 1)}
+            onChange={(i) => setStagedDay(i + 1)}
+            width={56}
+          />
+          <View style={[styles.birthdaySep, { backgroundColor: colors.border }]} />
+          <WheelColumn
+            items={months}
+            selectedIndex={stagedMonth}
+            onChange={(i) => setStagedMonth(i)}
+            width={130}
+          />
+          <View style={[styles.birthdaySep, { backgroundColor: colors.border }]} />
+          <WheelColumn
+            items={YEARS}
+            selectedIndex={yearIndex >= 0 ? yearIndex : 0}
+            onChange={(i) => setStagedYear(Number(YEARS[i]))}
+            width={68}
+          />
+        </View>
+      </PickerSheet>
+    </>
+  );
+}
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
@@ -405,6 +505,22 @@ const styles = StyleSheet.create({
   },
   timeSeparator: { fontSize: 28, fontWeight: '700', marginBottom: 2 },
 
+  // Birthday wheel
+  birthdayWheel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 0,
+  },
+  birthdaySep: {
+    width: StyleSheet.hairlineWidth,
+    height: ITEM_H * VISIBLE * 0.6,
+    marginHorizontal: 4,
+    opacity: 0.3,
+  },
+
   // Dialog
   backdropFill: {
     ...StyleSheet.absoluteFillObject,
@@ -415,6 +531,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+  },
+  dialogSwipeSurface: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dialog: {
     width: '100%',
@@ -429,13 +550,22 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 12,
+    paddingTop: 14,
+    paddingBottom: 4,
     paddingHorizontal: 16,
+    gap: 8,
   },
-  toolbarBtn: { minWidth: 60 },
-  toolbarTitle: { textTransform: 'uppercase', letterSpacing: 0.4 },
+  toolbarTitle: {
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    fontSize: 11,
+  },
+  toolbarButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  toolbarBtn: {},
 });

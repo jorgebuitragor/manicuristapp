@@ -322,3 +322,226 @@ ALTER TABLE IF EXISTS nail_racks ADD COLUMN IF NOT EXISTS max_capacity INTEGER;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_nail_polish_rack_position
   ON nail_polishes(rack_id, rack_position)
   WHERE rack_position IS NOT NULL AND rack_id IS NOT NULL;
+
+-- ============================================================
+-- EFECTOS DE ESMALTE
+-- ============================================================
+
+ALTER TABLE nail_polishes ADD COLUMN IF NOT EXISTS effect TEXT DEFAULT NULL
+  CHECK (effect IS NULL OR effect IN ('matte', 'shimmer', 'glitter', 'cat_eye', 'holographic', 'duochrome'));
+
+-- ============================================================
+-- MULTI-TENANCY: ORGANIZATIONS
+-- ============================================================
+
+-- Tabla raíz de tenants
+CREATE TABLE IF NOT EXISTS organizations (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT NOT NULL,
+  type       TEXT NOT NULL CHECK (type IN ('home_studio', 'salon')),
+  owner_id   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Membresías: liga usuarios a organizaciones
+CREATE TABLE IF NOT EXISTS organization_members (
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role            TEXT NOT NULL DEFAULT 'owner' CHECK (role IN ('owner', 'member')),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (organization_id, user_id)
+);
+
+-- Ligar professionals a auth.users y a su org
+ALTER TABLE professionals ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE professionals ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+
+-- organization_id en todas las tablas de datos
+ALTER TABLE clients             ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE services            ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE nail_polish_brands  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE nail_racks          ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE nail_polishes       ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE appointments        ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE incomes             ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE polish_base_colors  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE polish_tone_families ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+
+-- Índices para org queries
+CREATE INDEX IF NOT EXISTS idx_org_members_user      ON organization_members (user_id);
+CREATE INDEX IF NOT EXISTS idx_clients_org           ON clients (organization_id);
+CREATE INDEX IF NOT EXISTS idx_services_org          ON services (organization_id);
+CREATE INDEX IF NOT EXISTS idx_nail_polishes_org     ON nail_polishes (organization_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_org      ON appointments (organization_id);
+CREATE INDEX IF NOT EXISTS idx_incomes_org           ON incomes (organization_id);
+CREATE INDEX IF NOT EXISTS idx_professionals_org     ON professionals (organization_id);
+
+-- Función helper: devuelve el organization_id del usuario autenticado
+CREATE OR REPLACE FUNCTION get_my_org_id()
+RETURNS UUID AS $$
+  SELECT organization_id
+  FROM organization_members
+  WHERE user_id = auth.uid()
+  LIMIT 1
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- ============================================================
+-- RLS: ORGANIZATIONS
+-- ============================================================
+
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_member_select" ON organizations
+  FOR SELECT TO authenticated
+  USING (id = get_my_org_id());
+
+CREATE POLICY "org_owner_insert" ON organizations
+  FOR INSERT TO authenticated
+  WITH CHECK (owner_id = auth.uid());
+
+CREATE POLICY "org_owner_update" ON organizations
+  FOR UPDATE TO authenticated
+  USING (owner_id = auth.uid());
+
+-- ============================================================
+-- RLS: ORGANIZATION_MEMBERS
+-- ============================================================
+
+ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "member_select_own_org" ON organization_members
+  FOR SELECT TO authenticated
+  USING (organization_id = get_my_org_id());
+
+CREATE POLICY "member_self_insert" ON organization_members
+  FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid());
+
+-- ============================================================
+-- RLS: Reemplazar políticas abiertas por aislamiento por org
+-- ============================================================
+
+-- professionals
+DROP POLICY IF EXISTS "auth_all" ON professionals;
+CREATE POLICY "org_all" ON professionals
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- clients
+DROP POLICY IF EXISTS "auth_all" ON clients;
+CREATE POLICY "org_all" ON clients
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- services
+DROP POLICY IF EXISTS "auth_all" ON services;
+CREATE POLICY "org_all" ON services
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- nail_polish_brands
+DROP POLICY IF EXISTS "auth_all" ON nail_polish_brands;
+CREATE POLICY "org_all" ON nail_polish_brands
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- nail_racks
+DROP POLICY IF EXISTS "auth_all" ON nail_racks;
+CREATE POLICY "org_all" ON nail_racks
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- nail_polishes
+DROP POLICY IF EXISTS "auth_all" ON nail_polishes;
+CREATE POLICY "org_all" ON nail_polishes
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- appointments
+DROP POLICY IF EXISTS "auth_all" ON appointments;
+CREATE POLICY "org_all" ON appointments
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- incomes
+DROP POLICY IF EXISTS "auth_all" ON incomes;
+CREATE POLICY "org_all" ON incomes
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- polish_base_colors
+DROP POLICY IF EXISTS "auth_all" ON polish_base_colors;
+CREATE POLICY "org_all" ON polish_base_colors
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- polish_tone_families
+DROP POLICY IF EXISTS "auth_all" ON polish_tone_families;
+CREATE POLICY "org_all" ON polish_tone_families
+  FOR ALL TO authenticated
+  USING (organization_id = get_my_org_id())
+  WITH CHECK (organization_id = get_my_org_id());
+
+-- appointment_services: aislamiento vía appointment padre
+DROP POLICY IF EXISTS "auth_all" ON appointment_services;
+CREATE POLICY "org_all" ON appointment_services
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM appointments a
+      WHERE a.id = appointment_services.appointment_id
+        AND a.organization_id = get_my_org_id()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM appointments a
+      WHERE a.id = appointment_services.appointment_id
+        AND a.organization_id = get_my_org_id()
+    )
+  );
+
+-- appointment_polishes: aislamiento vía appointment padre
+DROP POLICY IF EXISTS "auth_all" ON appointment_polishes;
+CREATE POLICY "org_all" ON appointment_polishes
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM appointments a
+      WHERE a.id = appointment_polishes.appointment_id
+        AND a.organization_id = get_my_org_id()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM appointments a
+      WHERE a.id = appointment_polishes.appointment_id
+        AND a.organization_id = get_my_org_id()
+    )
+  );
+
+-- ============================================================
+-- FIX: UNIQUE por org en marcas y esmalteros
+-- Las tablas fueron creadas con UNIQUE(name) global antes del
+-- multi-tenant. Reemplazar por UNIQUE(name, organization_id).
+-- ============================================================
+
+ALTER TABLE nail_polish_brands DROP CONSTRAINT IF EXISTS nail_polish_brands_name_key;
+ALTER TABLE nail_racks         DROP CONSTRAINT IF EXISTS nail_racks_name_key;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_brand_name_org
+  ON nail_polish_brands (name, organization_id)
+  WHERE organization_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_rack_name_org
+  ON nail_racks (name, organization_id)
+  WHERE organization_id IS NOT NULL;

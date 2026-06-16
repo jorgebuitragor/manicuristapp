@@ -1,38 +1,46 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useOrganization } from '@/context/OrganizationContext';
 import type { PolishBrand } from '@/types/database.types';
 
 export const POLISH_BRANDS_KEY = ['polish-brands'] as const;
 
 export function usePolishBrands() {
+  const { organizationId } = useOrganization();
   return useQuery({
-    queryKey: POLISH_BRANDS_KEY,
+    queryKey: [...POLISH_BRANDS_KEY, organizationId],
     queryFn: async () => {
+      if (!organizationId) return [];
       const { data, error } = await supabase
         .from('nail_polish_brands')
         .select('*')
+        .eq('organization_id', organizationId)
         .order('name');
       if (error) throw error;
       return data as PolishBrand[];
     },
+    enabled: !!organizationId,
   });
 }
 
 export function useCreatePolishBrand() {
   const queryClient = useQueryClient();
+  const { organizationId } = useOrganization();
   return useMutation({
     mutationFn: async (name: string) => {
+      if (!organizationId) throw new Error('No organization');
       const trimmed = name.trim();
       const { data: existing, error: selectError } = await supabase
         .from('nail_polish_brands')
         .select('*')
+        .eq('organization_id', organizationId)
         .ilike('name', trimmed)
         .maybeSingle();
       if (selectError) throw selectError;
       if (existing) return existing as PolishBrand;
       const { data, error } = await supabase
         .from('nail_polish_brands')
-        .insert({ name: trimmed })
+        .insert({ name: trimmed, organization_id: organizationId })
         .select('*')
         .single();
       if (error) throw error;

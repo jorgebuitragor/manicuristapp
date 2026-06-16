@@ -7,18 +7,20 @@ interface TabletQuickActionFabProps {
   label: string;
   onPress: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
+  style?: import('react-native').StyleProp<import('react-native').ViewStyle>;
 }
 
 export function TabletQuickActionFab({
   label,
   onPress,
   icon = 'add',
+  style,
 }: TabletQuickActionFabProps) {
   const { colors } = useTheme();
 
   return (
     <TouchableOpacity
-      style={[styles.fab, { backgroundColor: colors.primary }]}
+      style={[styles.fab, { backgroundColor: colors.primary }, style]}
       onPress={onPress}
       activeOpacity={0.9}
     >
