@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState, startTransition } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   View, FlatList, TouchableOpacity, StyleSheet, Text,
@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedDropdown } from '@/components/ui/ThemedDropdown';
+import { ThemedSection } from '@/components/ui/ThemedSection';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { usePolishes, useDeletePolish, useMovePolish, POLISHES_KEY } from '@/hooks/usePolishes';
 import { usePolishBrands } from '@/hooks/usePolishBrands';
@@ -51,8 +52,8 @@ const DEFAULT_POLISH_FILTERS: PolishFilterState = {
   stock: 'all',
   baseColor: '',
   toneFamily: '',
-  sortBy: 'recent',
-  sortDirection: 'desc',
+  sortBy: 'position',
+  sortDirection: 'asc',
 };
 
 
@@ -256,10 +257,10 @@ function SwatchSection({
   onSelectForMove: (polish: NailPolish) => void;
   onClearMove: () => void;
   onLongPressEmptySlot: (position: number) => void;
+  movePolish: ReturnType<typeof useMovePolish>;
 }) {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const movePolish = useMovePolish();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const qc = useQueryClient();
@@ -500,7 +501,11 @@ function PolishFiltersModal({
   }, [initialState, visible]);
 
   const brandOptions = [{ value: '', label: t('polishes.filter.allBrands') }, ...brands.map((brand) => ({ value: brand.id, label: brand.name }))];
-  const rackOptions = [{ value: '', label: t('polishes.filter.allRacks') }, ...racks.map((rack) => ({ value: rack.id, label: rack.name }))];
+  const rackOptions = [
+    { value: '', label: t('polishes.filter.allRacks') },
+    ...racks.map((rack) => ({ value: rack.id, label: rack.name })),
+    { value: 'unassigned', label: t('polishes.unassignedRack') },
+  ];
   const stockOptions = [
     { value: 'all', label: t('polishes.filter.stock.all') },
     { value: 'inStock', label: t('polishes.filter.stock.inStock') },
@@ -537,11 +542,14 @@ function PolishFiltersModal({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.filtersModalBackdrop}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
-        <SwipeToDismissModal onDismiss={onClose} containerStyle={styles.filtersSwipeSurface}>
-          <View style={[styles.filtersModalSheet, { backgroundColor: colors.background }]}> 
+    <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
+      <View style={styles.filtersModalRoot}>
+        {/* Backdrop fijo — no participa en la animación */}
+        <View style={[StyleSheet.absoluteFill, styles.filtersModalBackdrop]} pointerEvents="none" />
+        {/* Shell transparente — solo el sheet interior se desliza */}
+        <SwipeToDismissModal onDismiss={onClose} containerStyle={styles.filtersSheetContainer}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+          <View style={[styles.filtersModalSheet, { backgroundColor: colors.background }]}>
             <ScreenHeader
               leadingLabel={t('common.cancel')}
               onLeadingPress={onClose}
@@ -554,71 +562,78 @@ function PolishFiltersModal({
             />
 
             <ScrollView contentContainerStyle={styles.filtersContent} keyboardShouldPersistTaps="handled">
-              <ThemedDropdown
-                label={t('polishes.filter.brand')}
-                value={draft.brandId}
-                options={brandOptions}
-                onChange={(value) => updateDraft('brandId', value)}
-                placeholder={t('polishes.filter.allBrands')}
-                stackOrder={70}
-              />
+              <ThemedSection>
+                <View style={styles.filtersSectionHeader}>
+                  <Ionicons name="swap-vertical-outline" size={15} color={colors.primary} />
+                  <ThemedText variant="sectionTitle" tone="primary">{t('polishes.sortBy')}</ThemedText>
+                </View>
+                <ThemedDropdown
+                  label={t('polishes.sortBy')}
+                  value={draft.sortBy}
+                  options={sortOptions}
+                  onChange={(value) => updateDraft('sortBy', value as PolishSort)}
+                  stackOrder={80}
+                />
+                <ThemedDropdown
+                  label={t('polishes.sortDirection')}
+                  value={draft.sortDirection}
+                  options={sortDirectionOptions}
+                  onChange={(value) => updateDraft('sortDirection', value as SortDirection)}
+                  stackOrder={70}
+                />
+              </ThemedSection>
 
-            <ThemedDropdown
-              label={t('polishes.filter.rack')}
-              value={draft.rackId}
-              options={rackOptions}
-              onChange={(value) => updateDraft('rackId', value)}
-              placeholder={t('polishes.filter.allRacks')}
-              stackOrder={60}
-            />
-
-            <ThemedDropdown
-              label={t('polishes.filter.stock')}
-              value={draft.stock}
-              options={stockOptions}
-              onChange={(value) => updateDraft('stock', value as StockFilter)}
-              stackOrder={50}
-            />
-
-            <ThemedDropdown
-              label={t('polishes.filter.baseColor')}
-              value={draft.baseColor}
-              options={baseColorOptions}
-              onChange={(value) => updateDraft('baseColor', value)}
-              placeholder={t('polishes.filter.allBaseColors')}
-              stackOrder={40}
-            />
-
-            <ThemedDropdown
-              label={t('polishes.filter.toneFamily')}
-              value={draft.toneFamily}
-              options={toneOptions}
-              onChange={(value) => updateDraft('toneFamily', value)}
-              placeholder={t('polishes.filter.allToneFamilies')}
-              stackOrder={30}
-            />
-
-            <ThemedDropdown
-              label={t('polishes.sortBy')}
-              value={draft.sortBy}
-              options={sortOptions}
-              onChange={(value) => updateDraft('sortBy', value as PolishSort)}
-              stackOrder={20}
-            />
-
-            <ThemedDropdown
-              label={t('polishes.sortDirection')}
-              value={draft.sortDirection}
-              options={sortDirectionOptions}
-              onChange={(value) => updateDraft('sortDirection', value as SortDirection)}
-              stackOrder={10}
-            />
+              <ThemedSection>
+                <View style={styles.filtersSectionHeader}>
+                  <Ionicons name="funnel-outline" size={15} color={colors.primary} />
+                  <ThemedText variant="sectionTitle" tone="primary">{t('polishes.filter.sectionTitle')}</ThemedText>
+                </View>
+                <ThemedDropdown
+                  label={t('polishes.filter.brand')}
+                  value={draft.brandId}
+                  options={brandOptions}
+                  onChange={(value) => updateDraft('brandId', value)}
+                  placeholder={t('polishes.filter.allBrands')}
+                  stackOrder={60}
+                />
+                <ThemedDropdown
+                  label={t('polishes.filter.rack')}
+                  value={draft.rackId}
+                  options={rackOptions}
+                  onChange={(value) => updateDraft('rackId', value)}
+                  placeholder={t('polishes.filter.allRacks')}
+                  stackOrder={50}
+                />
+                <ThemedDropdown
+                  label={t('polishes.filter.stock')}
+                  value={draft.stock}
+                  options={stockOptions}
+                  onChange={(value) => updateDraft('stock', value as StockFilter)}
+                  stackOrder={40}
+                />
+                <ThemedDropdown
+                  label={t('polishes.filter.baseColor')}
+                  value={draft.baseColor}
+                  options={baseColorOptions}
+                  onChange={(value) => updateDraft('baseColor', value)}
+                  placeholder={t('polishes.filter.allBaseColors')}
+                  stackOrder={30}
+                />
+                <ThemedDropdown
+                  label={t('polishes.filter.toneFamily')}
+                  value={draft.toneFamily}
+                  options={toneOptions}
+                  onChange={(value) => updateDraft('toneFamily', value)}
+                  placeholder={t('polishes.filter.allToneFamilies')}
+                  stackOrder={20}
+                />
+              </ThemedSection>
 
               <ThemedButton
                 label={t('polishes.clearFilters')}
-                variant="ghost"
+                variant="outline"
+                icon="refresh-outline"
                 onPress={() => setDraft(DEFAULT_POLISH_FILTERS)}
-                style={styles.clearFiltersButton}
               />
             </ScrollView>
           </View>
@@ -634,6 +649,7 @@ export default function PolishesScreen() {
   const { data: brands = [] } = usePolishBrands();
   const { data: racks = [] } = useNailRacks();
   const deletePolish = useDeletePolish();
+  const movePolish = useMovePolish();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const [search, setSearch] = useState('');
@@ -652,12 +668,16 @@ export default function PolishesScreen() {
   const { showEmptyPositions: showAllPositions, setShowEmptyPositions: setShowAllPositions } = useDrawingPad();
   const { width } = useWindowDimensions();
   const gridColumns = Math.max(2, Math.floor(width / MIN_CARD_WIDTH));
+  const isTablet = width >= 768;
+  const emptyImageSize = isTablet ? 480 : 160;
   const { colors } = useTheme();
   const { t } = useI18n();
 
+  const { baseColors } = usePolishLabels();
   const normalizedSearch = deferredSearch.trim().toLowerCase();
 
-  const rackMap = new Map(racks.map((rack) => [rack.id, rack.name]));
+  const rackMap = useMemo(() => new Map(racks.map((rack) => [rack.id, rack.name])), [racks]);
+  const baseColorMap = useMemo(() => new Map(baseColors.map((c) => [c.key, c.label.toLowerCase()])), [baseColors]);
   const hasActiveFilters =
     filters.brandId !== DEFAULT_POLISH_FILTERS.brandId ||
     filters.rackId !== DEFAULT_POLISH_FILTERS.rackId ||
@@ -667,18 +687,21 @@ export default function PolishesScreen() {
     filters.sortBy !== DEFAULT_POLISH_FILTERS.sortBy ||
     filters.sortDirection !== DEFAULT_POLISH_FILTERS.sortDirection;
 
-  const filtered = [...(polishes ?? [])]
+  const filtered = useMemo(() => [...(polishes ?? [])]
     .filter((polish) => {
       const rackName = polish.rack_id ? rackMap.get(polish.rack_id)?.toLowerCase() : '';
+      const baseColorLabel = polish.base_color ? baseColorMap.get(polish.base_color) : undefined;
       const matchesSearch =
         !normalizedSearch ||
         polish.color_name.toLowerCase().includes(normalizedSearch) ||
         polish.brand.toLowerCase().includes(normalizedSearch) ||
         polish.polish_code.toLowerCase().includes(normalizedSearch) ||
-        rackName?.includes(normalizedSearch);
+        rackName?.includes(normalizedSearch) ||
+        (baseColorLabel?.includes(normalizedSearch) ?? false);
 
       const matchesBrand = !filters.brandId || polish.brand_id === filters.brandId;
-      const matchesRack = !filters.rackId || polish.rack_id === filters.rackId;
+      const matchesRack = !filters.rackId
+        || (filters.rackId === 'unassigned' ? polish.rack_id === null : polish.rack_id === filters.rackId);
       const matchesStock =
         filters.stock === 'all' ||
         (filters.stock === 'inStock' && polish.stock > 0) ||
@@ -698,18 +721,23 @@ export default function PolishesScreen() {
       } else if (filters.sortBy === 'code') {
         result = left.polish_code.localeCompare(right.polish_code, undefined, { numeric: true, sensitivity: 'base' });
       } else if (filters.sortBy === 'position') {
-        result = compareNullableNumbers(left.rack_position, right.rack_position);
-        if (result === 0) {
-          result = left.polish_code.localeCompare(right.polish_code, undefined, { numeric: true, sensitivity: 'base' });
+        const leftRack = left.rack_id ? (rackMap.get(left.rack_id) ?? '') : null;
+        const rightRack = right.rack_id ? (rackMap.get(right.rack_id) ?? '') : null;
+        if (leftRack === null && rightRack !== null) return 1;
+        if (leftRack !== null && rightRack === null) return -1;
+        if (leftRack !== null && rightRack !== null) {
+          result = leftRack.localeCompare(rightRack, undefined, { numeric: true, sensitivity: 'base' });
         }
+        if (result === 0) result = compareNullableNumbers(left.rack_position, right.rack_position);
+        if (result === 0) result = left.polish_code.localeCompare(right.polish_code, undefined, { numeric: true, sensitivity: 'base' });
       } else {
         result = new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
       }
 
       return filters.sortDirection === 'asc' ? result : result * -1;
-    });
+    }), [polishes, normalizedSearch, filters, rackMap, baseColorMap]);
 
-  const rackSections = Array.from(
+  const rackSections = useMemo(() => Array.from(
     filtered.reduce((sections, polish) => {
       const key = polish.rack_id ?? 'unassigned';
       const rackObj = polish.rack_id ? racks.find((r) => r.id === polish.rack_id) ?? null : null;
@@ -737,11 +765,12 @@ export default function PolishesScreen() {
         return left.polish_code.localeCompare(right.polish_code, undefined, { numeric: true, sensitivity: 'base' });
       }),
     }))
-    .sort((left, right) => left.label.localeCompare(right.label, undefined, { sensitivity: 'base' }));
+    .sort((left, right) => left.label.localeCompare(right.label, undefined, { sensitivity: 'base' }))
+  , [filtered, racks, t]);
 
-  const visibleRackSections = selectedRackId === ''
-    ? rackSections
-    : rackSections.filter((s) => s.rackId === selectedRackId);
+  const visibleRackSections = useMemo(() =>
+    selectedRackId === '' ? rackSections : rackSections.filter((s) => s.rackId === selectedRackId)
+  , [rackSections, selectedRackId]);
 
   function handleLongPress(p: NailPolish) {
     showConfirm({
@@ -786,19 +815,19 @@ export default function PolishesScreen() {
             label={t('polishes.views.grid')}
             icon="grid-outline"
             active={viewMode === 'grid'}
-            onPress={() => setViewMode('grid')}
+            onPress={() => startTransition(() => setViewMode('grid'))}
           />
           <PolishViewButton
             label={t('polishes.views.list')}
             icon="list-outline"
             active={viewMode === 'list'}
-            onPress={() => setViewMode('list')}
+            onPress={() => startTransition(() => setViewMode('list'))}
           />
           <PolishViewButton
             label={t('polishes.views.swatch')}
             icon="color-palette-outline"
             active={viewMode === 'swatch'}
-            onPress={() => setViewMode('swatch')}
+            onPress={() => startTransition(() => setViewMode('swatch'))}
           />
         </View>
 
@@ -864,12 +893,13 @@ export default function PolishesScreen() {
                 onLongPressEmptySlot={(position) =>
                   router.push({ pathname: '/polishes/new' as any, params: { rackId: section.rackId ?? '', position: String(position) } })
                 }
+                movePolish={movePolish}
               />
             ))
           ) : (
             <View style={styles.empty}>
-              <Ionicons name="color-palette-outline" size={48} color={colors.textTertiary} />
-              <ThemedText tone="tertiary" style={styles.emptyText}>
+              <Image source={require('@/assets/empty_polish.png')} style={{ width: emptyImageSize, height: emptyImageSize }} resizeMode="contain" />
+              <ThemedText tone="tertiary" style={[styles.emptyText, { marginTop: isTablet ? -120 : -40 }]}>
                 {search || hasActiveFilters ? t('common.noResults') : t('polishes.empty')}
               </ThemedText>
             </View>
@@ -902,8 +932,8 @@ export default function PolishesScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="color-palette-outline" size={48} color={colors.textTertiary} />
-              <ThemedText tone="tertiary" style={styles.emptyText}> 
+              <Image source={require('@/assets/empty_polish.png')} style={{ width: emptyImageSize, height: emptyImageSize }} resizeMode="contain" />
+              <ThemedText tone="tertiary" style={[styles.emptyText, { marginTop: isTablet ? -120 : -40 }]}>
                 {search || hasActiveFilters ? t('common.noResults') : t('polishes.empty')}
               </ThemedText>
             </View>
@@ -1189,12 +1219,13 @@ const styles = StyleSheet.create({
   },
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 16 },
-  filtersModalBackdrop: {
+  filtersModalRoot: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.22)',
-    justifyContent: 'flex-end',
   },
-  filtersSwipeSurface: {
+  filtersModalBackdrop: {
+    backgroundColor: 'rgba(15, 23, 42, 0.22)',
+  },
+  filtersSheetContainer: {
     flex: 1,
     justifyContent: 'flex-end',
   },
@@ -1206,11 +1237,14 @@ const styles = StyleSheet.create({
   },
   filtersContent: {
     padding: 16,
-    gap: 14,
-    paddingBottom: 28,
+    gap: 12,
+    paddingBottom: 32,
   },
-  clearFiltersButton: {
-    alignSelf: 'flex-start',
+  filtersSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 2,
   },
   // Modal
   modal: { flex: 1 },

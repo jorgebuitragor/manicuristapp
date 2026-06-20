@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View,
+  Animated, Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { CalendarUtils } from 'react-native-calendars';
 import type { DateData } from 'react-native-calendars';
@@ -118,6 +118,8 @@ interface PickerSheetProps {
 function PickerSheet({ open, title, onCancel, onConfirm, children }: PickerSheetProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { width: screenWidth } = useWindowDimensions();
+  const dialogWidth = Math.min(screenWidth - 24, 600);
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
   const scale = useRef(new Animated.Value(0.92)).current;
@@ -153,7 +155,7 @@ function PickerSheet({ open, title, onCancel, onConfirm, children }: PickerSheet
           <Animated.View
             style={[
               styles.dialog,
-              { backgroundColor: colors.card, borderColor: colors.border },
+              { width: dialogWidth, backgroundColor: colors.card, borderColor: colors.border },
               { transform: [{ scale }], opacity: backdropOpacity },
             ]}
           >
@@ -530,7 +532,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    paddingVertical: 24,
   },
   dialogSwipeSurface: {
     flex: 1,
@@ -538,8 +540,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dialog: {
-    width: '100%',
-    maxWidth: 360,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',

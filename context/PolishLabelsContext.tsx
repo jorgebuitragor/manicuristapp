@@ -15,6 +15,7 @@ export interface PolishLabel {
   key: string;
   label: string;
   isBuiltIn: boolean;
+  hex_color?: string | null;
 }
 
 // Built-in keys — resolved from i18n, always present as fallback when DB is empty
@@ -39,7 +40,7 @@ interface PolishLabelsContextValue {
   baseColors: PolishLabel[];
   toneFamilies: PolishLabel[];
   isLoading: boolean;
-  addBaseColor: (key: string, label: string) => Promise<void>;
+  addBaseColor: (key: string, label: string, hexColor?: string | null) => Promise<void>;
   removeBaseColor: (id: string) => Promise<void>;
   addToneFamily: (key: string, label: string) => Promise<void>;
   removeToneFamily: (id: string) => Promise<void>;
@@ -76,7 +77,13 @@ function useBuiltInToneFamilies(t: (k: string) => string): PolishLabel[] {
 }
 
 function toPolishLabel(row: PolishBaseColor | PolishToneFamily): PolishLabel {
-  return { id: row.id, key: row.key, label: row.label, isBuiltIn: false };
+  return {
+    id: row.id,
+    key: row.key,
+    label: row.label,
+    isBuiltIn: false,
+    hex_color: 'hex_color' in row ? row.hex_color : null,
+  };
 }
 
 export function PolishLabelsProvider({ children }: { children: ReactNode }) {
@@ -106,8 +113,8 @@ export function PolishLabelsProvider({ children }: { children: ReactNode }) {
     ...(dbToneFamilies ?? []).filter((r) => !BUILT_IN_TONE_KEYS.includes(r.key)).map(toPolishLabel),
   ];
 
-  async function addBaseColor(key: string, label: string) {
-    await createBaseColor.mutateAsync({ key, label, sort_order: (dbBaseColors?.length ?? 0) });
+  async function addBaseColor(key: string, label: string, hexColor?: string | null) {
+    await createBaseColor.mutateAsync({ key, label, sort_order: (dbBaseColors?.length ?? 0), hex_color: hexColor });
   }
 
   async function removeBaseColor(id: string) {

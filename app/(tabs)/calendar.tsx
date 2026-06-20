@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View, TouchableOpacity, StyleSheet, useWindowDimensions,
-  ScrollView, ActivityIndicator, TextInput,
+  ScrollView, ActivityIndicator, TextInput, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -166,6 +166,7 @@ export default function CalendarScreen() {
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const isWideLayout = width >= 1000 || width > height;
+  const isTablet = width >= 768;
   const [selectedDate, setSelectedDate] = useState(todayString());
   const [calView, setCalView] = useState<CalendarView>('day');
   const [weekAnchor, setWeekAnchor] = useState(() => weekStart(todayString()));
@@ -305,8 +306,12 @@ export default function CalendarScreen() {
           ))
         ) : (
           <View style={styles.empty}>
-            <Ionicons name="flower-outline" size={40} color={colors.textTertiary} />
-            <ThemedText tone="tertiary" style={styles.emptyText}>{t('calendar.noAppointments')}</ThemedText>
+            <Image
+              source={require('@/assets/empty_calendar.png')}
+              style={{ width: isTablet ? 480 : 320, height: isTablet ? 480 : 320 }}
+              resizeMode="contain"
+            />
+            <ThemedText tone="tertiary" style={[styles.emptyText, { marginTop: isTablet ? -120 : -80 }]}>{t('calendar.noAppointments')}</ThemedText>
           </View>
         )}
       </ScrollView>

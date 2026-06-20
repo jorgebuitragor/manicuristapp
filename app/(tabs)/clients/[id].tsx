@@ -199,8 +199,8 @@ export default function ClientDetailScreen() {
         onTrailingPress={() => (editing ? handleSave() : setEditing(true))}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <ThemedSection>
             <ThemedText variant="sectionTitle">{t('client.detailsSection')}</ThemedText>
             <ClientField label={t('client.name')} value={name} editing={editing} onChangeText={setName} />

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, TextInput,
+  ActivityIndicator, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -115,10 +115,11 @@ export default function RacksScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenHeader
         leadingIcon="arrow-back"
-        onLeadingPress={() => router.navigate('/(tabs)/settings')}
+        onLeadingPress={() => router.back()}
         title={t('racks.title')}
       />
 
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Add new */}
         <View style={[styles.addCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -196,6 +197,7 @@ export default function RacksScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -186,6 +186,23 @@ function QuickActions() {
   );
 }
 
+// ─── Empty state ────────────────────────────────────────────────────────────
+
+function EmptyState() {
+  const { width } = useWindowDimensions();
+  const { t } = useI18n();
+  const isTablet = width >= 768;
+  const imageSize = isTablet ? 480 : 320;
+  const textOffset = isTablet ? -120 : -80;
+
+  return (
+    <View style={styles.emptyState}>
+      <Image source={require('@/assets/empty_screen.png')} style={{ width: imageSize, height: imageSize }} resizeMode="contain" />
+      <ThemedText tone="tertiary" style={[styles.emptyText, { marginTop: textOffset }]}>{t('home.empty')}</ThemedText>
+    </View>
+  );
+}
+
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -247,11 +264,7 @@ export default function HomeScreen() {
               ))}
             </>
           ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="flower-outline" size={48} color={colors.textTertiary} />
-              <ThemedText tone="tertiary" style={styles.emptyText}>{t('home.empty')}</ThemedText>
-              <QuickActions />
-            </View>
+            <EmptyState />
           )}
         </ScrollView>
       )}
@@ -403,7 +416,7 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingTop: 48,
-    gap: 16,
+    gap: 0,
   },
   emptyText: {
     fontSize: 16,

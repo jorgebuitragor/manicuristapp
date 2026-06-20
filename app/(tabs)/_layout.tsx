@@ -105,6 +105,7 @@ export default function TabsLayout() {
   const pathname = usePathname();
   const isTablet = Math.min(width, height) >= TABLET_BREAKPOINT;
   const isLandscape = width > height;
+  const isTabletLandscape = isTablet && isLandscape;
   const { colors } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -114,131 +115,101 @@ export default function TabsLayout() {
   const TAB_BAR_HEIGHT = 80;
   const fabBottomPortrait = TAB_BAR_HEIGHT + tabBarPaddingBottom + 16;
 
-  if (isTablet && isLandscape) {
-    return (
-      <View style={[styles.tabletContainer, { backgroundColor: colors.background }]}>
-        <TabletSidebar />
-        <View style={styles.tabletContent}>
-          <Tabs
-            screenOptions={{
-              headerShown: false,
-              animation: 'shift',
-              sceneStyle: { backgroundColor: colors.background },
-              tabBarStyle: { display: 'none' },
+  return (
+    <View
+      style={[
+        isTabletLandscape ? styles.tabletContainer : styles.tabletContent,
+        { backgroundColor: colors.background },
+      ]}
+    >
+      {isTabletLandscape && <TabletSidebar />}
+      <View style={styles.tabletContent}>
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            animation: 'shift',
+            sceneStyle: { backgroundColor: colors.background },
+            tabBarActiveTintColor: colors.primary,
+            tabBarInactiveTintColor: colors.textTertiary,
+            tabBarStyle: isTabletLandscape
+              ? { display: 'none' }
+              : {
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                  borderTopColor: colors.border,
+                  backgroundColor: colors.tabBar,
+                  paddingBottom: tabBarPaddingBottom,
+                  ...(isTablet && { height: 80, paddingTop: 10 }),
+                },
+            tabBarLabelStyle: {
+              fontSize: isTablet ? 13 : 11,
+              fontWeight: '500',
+            },
+          }}
+        >
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: t('tabs.today'),
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'home' : 'home-outline'} size={isTablet ? 24 : 22} color={color} />
+              ),
             }}
-          >
-            <Tabs.Screen name="index" />
-            <Tabs.Screen name="calendar" />
-            <Tabs.Screen name="clients/index" />
-            <Tabs.Screen name="clients/[id]" />
-            <Tabs.Screen name="polishes/index" />
-          <Tabs.Screen name="polishes/labels" />
-            <Tabs.Screen name="services/index" />
-            <Tabs.Screen name="brands/index" />
-            <Tabs.Screen name="racks/index" />
-            <Tabs.Screen name="incomes" />
-            <Tabs.Screen name="settings" />
-          </Tabs>
-        </View>
+          />
+          <Tabs.Screen
+            name="calendar"
+            options={{
+              title: t('tabs.calendar'),
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={isTablet ? 24 : 22} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="clients/index"
+            options={{
+              title: t('tabs.clients'),
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'people' : 'people-outline'} size={isTablet ? 24 : 22} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen name="clients/[id]" options={{ href: null }} />
+          <Tabs.Screen
+            name="polishes/index"
+            options={{
+              title: t('tabs.polishes'),
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'color-palette' : 'color-palette-outline'} size={isTablet ? 24 : 22} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="incomes"
+            options={{
+              title: t('tabs.incomes'),
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'cash' : 'cash-outline'} size={isTablet ? 24 : 22} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="settings"
+            options={{
+              title: t('tabs.settings'),
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'settings' : 'settings-outline'} size={isTablet ? 24 : 22} color={color} />
+              ),
+            }}
+          />
+        </Tabs>
         {showTabletFab ? (
           <TabletQuickActionFab
-            label={t(fab.labelKey)}
-            onPress={() => router.push(fab.route as any)}
+            label={t(fab!.labelKey)}
+            onPress={() => router.push(fab!.route as any)}
+            style={isTabletLandscape ? undefined : { bottom: fabBottomPortrait }}
           />
         ) : null}
       </View>
-    );
-  }
-
-  return (
-    <View style={[styles.tabletContent, { backgroundColor: colors.background }]}>
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        animation: 'shift',
-        sceneStyle: { backgroundColor: colors.background },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarStyle: {
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: colors.border,
-          backgroundColor: colors.tabBar,
-          paddingBottom: tabBarPaddingBottom,
-          ...(isTablet && { height: 80, paddingTop: 10 }),
-        },
-        tabBarLabelStyle: {
-          fontSize: isTablet ? 13 : 11,
-          fontWeight: '500',
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: t('tabs.today'),
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={isTablet ? 24 : 22} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="calendar"
-        options={{
-          title: t('tabs.calendar'),
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={isTablet ? 24 : 22} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="clients/index"
-        options={{
-          title: t('tabs.clients'),
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'people' : 'people-outline'} size={isTablet ? 24 : 22} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen name="clients/[id]" options={{ href: null }} />
-      <Tabs.Screen name="services/index" options={{ href: null }} />
-      <Tabs.Screen name="brands/index" options={{ href: null }} />
-      <Tabs.Screen name="racks/index" options={{ href: null }} />
-      <Tabs.Screen name="polishes/labels" options={{ href: null }} />
-      <Tabs.Screen
-        name="polishes/index"
-        options={{
-          title: t('tabs.polishes'),
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'color-palette' : 'color-palette-outline'} size={isTablet ? 24 : 22} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="incomes"
-        options={{
-          title: t('tabs.incomes'),
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'cash' : 'cash-outline'} size={isTablet ? 24 : 22} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: t('tabs.settings'),
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={isTablet ? 24 : 22} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
-    {showTabletFab ? (
-      <TabletQuickActionFab
-        label={t(fab!.labelKey)}
-        onPress={() => router.push(fab!.route as any)}
-        style={{ bottom: fabBottomPortrait }}
-      />
-    ) : null}
     </View>
   );
 }

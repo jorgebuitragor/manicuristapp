@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   View, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Image, TextInput,
+  ActivityIndicator, Image, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -105,7 +105,7 @@ function ServiceModal({
   const isPending = createService.isPending || updateService.isPending;
 
   return (
-    <View style={[styles.modal, { backgroundColor: colors.background }]}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modal, { backgroundColor: colors.background }]}>
       <ScreenHeader
         leadingLabel={t('common.cancel')}
         onLeadingPress={onClose}
@@ -186,7 +186,7 @@ function ServiceModal({
         </ThemedSection>
 
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -272,7 +272,7 @@ export default function ServicesScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenHeader
         leadingIcon="arrow-back"
-        onLeadingPress={() => router.navigate('/(tabs)/settings')}
+        onLeadingPress={() => router.back()}
         title={t('services.title')}
         trailingLabel={t('services.new')}
         onTrailingPress={() => setShowAdd(true)}

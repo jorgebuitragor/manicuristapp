@@ -146,8 +146,8 @@ export default function NewAppointmentScreen() {
         trailingDisabled={createAppointment.isPending}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
           <ThemedSection>
             <ThemedText variant="sectionTitle">{t('appointment.dateTime')}</ThemedText>

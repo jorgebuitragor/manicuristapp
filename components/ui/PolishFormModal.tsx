@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, StyleSheet, TouchableOpacity, ScrollView,
+  View, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PhotoPickerField } from '@/components/ui/PhotoPickerField';
@@ -92,6 +92,8 @@ export function PolishFormModal({ onClose, polish, initialRackId, initialPositio
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const tempIdRef = useRef(`new_${Date.now()}`);
+  const slotsScrollRef = useRef<ScrollView>(null);
+  const rackChangedByUserRef = useRef(false);
   const { colors } = useTheme();
   const { t } = useI18n();
   const { showToast } = useToast();
@@ -128,6 +130,26 @@ export function PolishFormModal({ onClose, polish, initialRackId, initialPositio
       occupantPolish: taken ? rackPolishes.find((p) => p.rack_position === parsed) ?? null : null,
     };
   }, [allPolishes, selectedRackId, rackPosition, polish?.id, racks]);
+
+  // Auto-fill first available position when user picks a rack (new mode only)
+  useEffect(() => {
+    if (isEditing || !rackChangedByUserRef.current) return;
+    if (!selectedRackId) {
+      setRackPosition('');
+      return;
+    }
+    const firstAvailable = positionSlots.find((s) => !s.taken)?.position;
+    if (firstAvailable != null) setRackPosition(String(firstAvailable));
+  }, [selectedRackId]);
+
+  // Scroll the slots row to keep the selected position in view
+  useEffect(() => {
+    const pos = parseInt(rackPosition, 10);
+    if (isNaN(pos) || pos <= 0 || positionSlots.length === 0) return;
+    const SLOT_STEP = 42; // 36px slot + 6px gap
+    const scrollX = Math.max(0, (pos - 1) * SLOT_STEP - SLOT_STEP);
+    setTimeout(() => slotsScrollRef.current?.scrollTo({ x: scrollX, animated: true }), 80);
+  }, [rackPosition, positionSlots.length]);
 
   useEffect(() => {
     if (!polish) return;
@@ -186,7 +208,7 @@ export function PolishFormModal({ onClose, polish, initialRackId, initialPositio
   const normalizedHex = normalizeHexColor(hexColor);
 
   return (
-    <View style={[styles.modal, { backgroundColor: colors.background }]}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'android' ? 'height' : undefined} style={[styles.modal, { backgroundColor: colors.background }]}>
       <ScreenHeader
         leadingLabel={t('common.cancel')}
         onLeadingPress={onClose}
@@ -200,6 +222,7 @@ export function PolishFormModal({ onClose, polish, initialRackId, initialPositio
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         <PhotoPickerField
           bucket="polish-photos"
@@ -276,6 +299,8 @@ export function PolishFormModal({ onClose, polish, initialRackId, initialPositio
             { value: 'cat_eye', label: t('polishes.effect.cat_eye') },
             { value: 'holographic', label: t('polishes.effect.holographic') },
             { value: 'duochrome', label: t('polishes.effect.duochrome') },
+            { value: 'translucent', label: t('polishes.effect.translucent') },
+            { value: 'nude', label: t('polishes.effect.nude') },
           ]}
           onChange={setEffect}
           stackOrder={15}
@@ -287,7 +312,10 @@ export function PolishFormModal({ onClose, polish, initialRackId, initialPositio
           label={t('polishes.rack')}
           value={selectedRackId}
           options={rackOptions}
-          onChange={setSelectedRackId}
+          onChange={(val) => {
+            rackChangedByUserRef.current = true;
+            setSelectedRackId(val);
+          }}
           placeholder={t('polishes.rackPlaceholder')}
           stackOrder={10}
         />
@@ -332,7 +360,7 @@ export function PolishFormModal({ onClose, polish, initialRackId, initialPositio
             </ThemedText>
           ) : null}
           {positionSlots.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slotsScroll} contentContainerStyle={styles.slotsContent}>
+            <ScrollView ref={slotsScrollRef} horizontal showsHorizontalScrollIndicator={false} style={styles.slotsScroll} contentContainerStyle={styles.slotsContent}>
               {positionSlots.map(({ position, taken }) => {
                 const isCurrent = parsedPosition === position;
                 return (
@@ -399,7 +427,7 @@ export function PolishFormModal({ onClose, polish, initialRackId, initialPositio
           </SwipeToDismissModal>
         </View>
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

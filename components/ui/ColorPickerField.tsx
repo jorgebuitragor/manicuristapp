@@ -232,6 +232,12 @@ export function ColorPickerField({
     const knownHue = BASE_COLOR_HUES[key as keyof typeof BASE_COLOR_HUES];
     if (knownHue !== undefined) {
       updateColorFromHsv({ h: knownHue, s: tonePreset.saturation, v: tonePreset.value });
+      return;
+    }
+    const customHex = baseColors.find((c) => c.key === key)?.hex_color;
+    if (customHex && /^#[0-9A-Fa-f]{6}$/.test(customHex)) {
+      const parsed = hexToHsv(customHex);
+      if (parsed) updateColorFromHsv(parsed);
     }
   };
 
@@ -306,7 +312,7 @@ export function ColorPickerField({
         <View
           style={[
             styles.spectrumPanel,
-            { borderColor: colors.border, height: isMobile ? 160 : 190 },
+            { borderColor: colors.border, height: isMobile ? 220 : 260 },
           ]}
           onLayout={(event) => {
             setSpectrumLayout({

@@ -255,7 +255,7 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TouchableOpacity
             style={[styles.row, { borderBottomColor: colors.border }]}
-            onPress={() => router.push('/(tabs)/services')}
+            onPress={() => router.push('/settings/services')}
             activeOpacity={0.7}
           >
             <View style={styles.rowLeft}>
@@ -268,7 +268,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.row, { borderBottomColor: colors.border }]}
-            onPress={() => router.push('/(tabs)/brands')}
+            onPress={() => router.push('/settings/brands')}
             activeOpacity={0.7}
           >
             <View style={styles.rowLeft}>
@@ -281,7 +281,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.row, { borderBottomColor: colors.border }]}
-            onPress={() => router.push('/(tabs)/racks')}
+            onPress={() => router.push('/settings/racks')}
             activeOpacity={0.7}
           >
             <View style={styles.rowLeft}>
@@ -294,7 +294,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.row, styles.rowNoBorder]}
-            onPress={() => router.push('/(tabs)/polishes/labels' as any)}
+            onPress={() => router.push('/settings/labels')}
             activeOpacity={0.7}
           >
             <View style={styles.rowLeft}>

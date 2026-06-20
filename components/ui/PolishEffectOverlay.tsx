@@ -1,7 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export type PolishEffect = 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome';
+export type PolishEffect = 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | 'translucent' | 'nude';
 
 // Fixed sparkle positions — deterministic so no rerenders
 const SPARKLES: { top: number; left: number; size: number }[] = [
@@ -171,6 +171,37 @@ export function PolishEffectOverlay({ effect, hexColor }: Props) {
         />
       );
     }
+
+    case 'translucent':
+      // Jelly/sheer finish: strong specular highlight at top, glass-like transparency
+      return (
+        <LinearGradient
+          colors={[
+            'rgba(255,255,255,0.72)',
+            'rgba(255,255,255,0.28)',
+            'rgba(255,255,255,0.04)',
+            'rgba(255,255,255,0.22)',
+          ]}
+          start={{ x: 0.3, y: 0 }}
+          end={{ x: 0.7, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      );
+
+    case 'nude':
+      // Creamy satin finish: warm peach-white sheen, soft and muted
+      return (
+        <LinearGradient
+          colors={[
+            'rgba(255,235,210,0.50)',
+            'rgba(255,235,210,0.14)',
+            'rgba(255,235,210,0.32)',
+          ]}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      );
 
     default:
       return null;

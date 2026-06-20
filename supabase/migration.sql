@@ -328,7 +328,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_nail_polish_rack_position
 -- ============================================================
 
 ALTER TABLE nail_polishes ADD COLUMN IF NOT EXISTS effect TEXT DEFAULT NULL
-  CHECK (effect IS NULL OR effect IN ('matte', 'shimmer', 'glitter', 'cat_eye', 'holographic', 'duochrome'));
+  CHECK (effect IS NULL OR effect IN ('matte', 'shimmer', 'glitter', 'cat_eye', 'holographic', 'duochrome', 'translucent', 'nude'));
+
+-- Color por defecto para colores base personalizados
+ALTER TABLE polish_base_colors ADD COLUMN IF NOT EXISTS hex_color TEXT DEFAULT NULL;
+
+-- Ampliar check constraint para incluir translucent y nude
+ALTER TABLE nail_polishes DROP CONSTRAINT IF EXISTS nail_polishes_effect_check;
+ALTER TABLE nail_polishes ADD CONSTRAINT nail_polishes_effect_check
+  CHECK (effect IS NULL OR effect IN ('matte', 'shimmer', 'glitter', 'cat_eye', 'holographic', 'duochrome', 'translucent', 'nude'));
 
 -- ============================================================
 -- MULTI-TENANCY: ORGANIZATIONS

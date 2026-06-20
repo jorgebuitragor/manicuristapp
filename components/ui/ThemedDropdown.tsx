@@ -71,7 +71,8 @@ export function ThemedDropdown({
       } else {
         // Open upward
         maxHeight = Math.min(340, Math.max(120, spaceAbove));
-        top = y - maxHeight - 6;
+        const positionHeight = Math.min(estimatedHeight, maxHeight);
+        top = y - positionHeight - 6;
       }
 
       setMenuFrame({ x: left, y: top, width: safeWidth, maxHeight });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, TextInput, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet, ActivityIndicator, Image, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +37,9 @@ export default function ClientsScreen() {
   const [search, setSearch] = useState('');
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const imageSize = isTablet ? 480 : 320;
 
   const filtered = clients?.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -81,8 +84,12 @@ export default function ClientsScreen() {
           contentContainerStyle={filtered.length === 0 ? styles.emptyContainer : undefined}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="people-outline" size={48} color={colors.textTertiary} />
-              <ThemedText tone="tertiary" style={styles.emptyText}> 
+              <Image
+                source={require('@/assets/empty_client.png')}
+                style={{ width: imageSize, height: imageSize }}
+                resizeMode="contain"
+              />
+              <ThemedText tone="tertiary" style={[styles.emptyText, { marginTop: isTablet ? -120 : -80 }]}>
                 {search ? t('common.noResults') : t('clients.empty')}
               </ThemedText>
             </View>

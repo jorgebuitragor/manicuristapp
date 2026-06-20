@@ -1,6 +1,6 @@
 import {
   View, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Share, Linking,
+  ActivityIndicator, Share, Linking, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -390,7 +390,8 @@ export default function AppointmentDetailScreen() {
         onTrailingPress={handleDelete}
       />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ThemedSection>
           <View style={styles.sectionRow}>
             <View style={[styles.accent, { backgroundColor: colors.primary }]} />
@@ -681,6 +682,7 @@ export default function AppointmentDetailScreen() {
           </ThemedSection>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <IncomeConfirmModal
         visible={incomeModalVisible}

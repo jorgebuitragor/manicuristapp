@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Modal, View, ScrollView, TouchableOpacity, Image,
   StyleSheet, Animated, Pressable, ActivityIndicator,
@@ -13,6 +13,8 @@ import { usePolish, useDeletePolish } from '@/hooks/usePolishes';
 import { useNailRacks } from '@/hooks/useNailRacks';
 import { ThemedText } from './ThemedText';
 import { ThemedButton } from './ThemedButton';
+import { PolishEffectOverlay } from './PolishEffectOverlay';
+import { PhotoPreviewModal } from './PhotoPreviewModal';
 
 interface PolishDetailModalProps {
   polishId: string | null;
@@ -44,6 +46,7 @@ export function PolishDetailModal({ polishId, onClose }: PolishDetailModalProps)
 
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.92)).current;
+  const [photoPreviewVisible, setPhotoPreviewVisible] = useState(false);
 
   const visible = !!polishId;
 
@@ -107,6 +110,14 @@ export function PolishDetailModal({ polishId, onClose }: PolishDetailModalProps)
       })()
     : null;
 
+  const effectLabel = polish?.effect
+    ? (() => {
+        const key = `polishes.effect.${polish.effect}`;
+        const translated = t(key as Parameters<typeof t>[0]);
+        return translated !== key ? translated : polish.effect;
+      })()
+    : null;
+
   return (
     <Modal
       visible={visible}
@@ -135,7 +146,11 @@ export function PolishDetailModal({ polishId, onClose }: PolishDetailModalProps)
               {/* Header */}
               <View style={styles.header}>
                 {/* Color preview */}
-                <View style={[styles.colorPreview, { backgroundColor: polish.hex_color ?? colors.primaryMuted }]}>
+                <TouchableOpacity
+                  style={[styles.colorPreview, { backgroundColor: polish.hex_color ?? colors.primaryMuted }]}
+                  onPress={polish.photo_url ? () => setPhotoPreviewVisible(true) : undefined}
+                  activeOpacity={polish.photo_url ? 0.85 : 1}
+                >
                   {polish.photo_url ? (
                     <Image source={{ uri: polish.photo_url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
                   ) : polish.hex_color ? (
@@ -145,7 +160,7 @@ export function PolishDetailModal({ polishId, onClose }: PolishDetailModalProps)
                   ) : (
                     <Ionicons name="color-palette" size={28} color="rgba(255,255,255,0.7)" />
                   )}
-                </View>
+                </TouchableOpacity>
 
                 {/* Title area */}
                 <View style={styles.titleArea}>
@@ -179,6 +194,17 @@ export function PolishDetailModal({ polishId, onClose }: PolishDetailModalProps)
                 )}
                 {baseColorLabel && <InfoRow label={t('polishes.baseColor')} value={baseColorLabel} />}
                 {toneFamilyLabel && <InfoRow label={t('polishes.toneFamily')} value={toneFamilyLabel} />}
+                {effectLabel && polish.effect && (
+                  <View style={styles.infoRow}>
+                    <ThemedText variant="caption" tone="tertiary" style={styles.infoLabel}>{t('polishes.effect')}</ThemedText>
+                    <View style={styles.infoValueRow}>
+                      <View style={[styles.effectSwatch, { backgroundColor: polish.hex_color ?? colors.primaryMuted }]}>
+                        <PolishEffectOverlay effect={polish.effect} hexColor={polish.hex_color} />
+                      </View>
+                      <ThemedText style={styles.infoValue}>{effectLabel}</ThemedText>
+                    </View>
+                  </View>
+                )}
                 <InfoRow label={t('polishes.rack')} value={rackName ?? t('polishes.unassignedRack')} />
                 <InfoRow
                   label={t('polishes.position')}
@@ -211,6 +237,14 @@ export function PolishDetailModal({ polishId, onClose }: PolishDetailModalProps)
           )}
         </Animated.View>
       </View>
+
+      {polish?.photo_url && (
+        <PhotoPreviewModal
+          visible={photoPreviewVisible}
+          uri={polish.photo_url}
+          onClose={() => setPhotoPreviewVisible(false)}
+        />
+      )}
     </Modal>
   );
 }
@@ -351,5 +385,12 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
+  },
+  effectSwatch: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    overflow: 'hidden',
+    flexShrink: 0,
   },
 });

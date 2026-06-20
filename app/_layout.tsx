@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { SplashAnimation } from '@/components/ui/SplashAnimation';
 
@@ -79,6 +79,10 @@ function AuthGuard({ session, isLoading }: { session: Session | null; isLoading:
         <Stack.Screen name="polishes/new" options={modalOptions} />
         <Stack.Screen name="polishes/[id]" options={modalOptions} />
         <Stack.Screen name="polishes/edit" options={{ animation: 'fade_from_bottom' }} />
+        <Stack.Screen name="settings/services" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/brands" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/racks" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
       </Stack>
     </View>
   );
@@ -87,7 +91,6 @@ function AuthGuard({ session, isLoading }: { session: Session | null; isLoading:
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -127,10 +130,6 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (showSplash) {
-    return <SplashAnimation onFinish={() => setShowSplash(false)} />;
-  }
-
   return (
     <PersistQueryClientProvider
       client={queryClient}
@@ -165,12 +164,22 @@ export default function RootLayout() {
 
 function AppContent({ session, isLoading }: { session: Session | null; isLoading: boolean }) {
   const { isDark } = useTheme();
+  const { isLoading: orgLoading } = useOrganization();
+  const [animationDone, setAnimationDone] = useState(false);
+
+  const showSplash = !animationDone || isLoading || orgLoading;
+
   return (
     <>
       <AuthGuard session={session} isLoading={isLoading} />
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <ToastRenderer />
       <OfflineBanner />
+      {showSplash && (
+        <View style={StyleSheet.absoluteFill}>
+          <SplashAnimation onFinish={() => setAnimationDone(true)} />
+        </View>
+      )}
     </>
   );
 }

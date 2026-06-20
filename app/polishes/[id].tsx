@@ -95,7 +95,15 @@ export default function PolishDetailScreen() {
     });
   }
 
-  const showColorSection = polish.hex_color || polish.base_color || polish.tone_family;
+  const effectLabel = polish.effect
+    ? (() => {
+        const key = `polishes.effect.${polish.effect}`;
+        const translated = t(key as Parameters<typeof t>[0]);
+        return translated !== key ? translated : polish.effect;
+      })()
+    : null;
+
+  const showColorSection = polish.hex_color || polish.base_color || polish.tone_family || polish.effect;
 
   return (
     <SwipeToDismissModal onDismiss={() => router.back()}>
@@ -145,6 +153,7 @@ export default function PolishDetailScreen() {
             )}
             {baseColorLabel && <DetailRow label={t('polishes.baseColor')} value={baseColorLabel} />}
             {toneFamilyLabel && <DetailRow label={t('polishes.toneFamily')} value={toneFamilyLabel} />}
+            {effectLabel && <DetailRow label={t('polishes.effect')} value={effectLabel} />}
           </ThemedSection>
         ) : null}
 

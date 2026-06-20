@@ -48,10 +48,10 @@ export function useCreatePolishBaseColor() {
   const qc = useQueryClient();
   const { organizationId } = useOrganization();
   return useMutation({
-    mutationFn: async ({ key, label, sort_order }: { key: string; label: string; sort_order: number }) => {
+    mutationFn: async ({ key, label, sort_order, hex_color }: { key: string; label: string; sort_order: number; hex_color?: string | null }) => {
       const { data, error } = await supabase
         .from('polish_base_colors')
-        .insert({ key, label, sort_order, organization_id: organizationId })
+        .insert({ key, label, sort_order, hex_color: hex_color ?? null, organization_id: organizationId })
         .select()
         .single();
       if (error) throw error;

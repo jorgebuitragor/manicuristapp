@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, TextInput,
+  ActivityIndicator, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -100,10 +100,11 @@ export default function BrandsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenHeader
         leadingIcon="arrow-back"
-        onLeadingPress={() => router.navigate('/(tabs)/settings')}
+        onLeadingPress={() => router.back()}
         title={t('brands.title')}
       />
 
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Add new */}
         <View style={[styles.addRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -157,6 +158,7 @@ export default function BrandsScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

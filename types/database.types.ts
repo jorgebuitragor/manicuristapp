@@ -216,6 +216,7 @@ export interface Database {
           id: string;
           key: string;
           label: string;
+          hex_color: string | null;
           sort_order: number;
           organization_id: string | null;
           created_at: string;
@@ -224,6 +225,7 @@ export interface Database {
           id?: string;
           key: string;
           label: string;
+          hex_color?: string | null;
           sort_order?: number;
           organization_id?: string | null;
           created_at?: string;
@@ -232,6 +234,7 @@ export interface Database {
           id?: string;
           key?: string;
           label?: string;
+          hex_color?: string | null;
           sort_order?: number;
           organization_id?: string | null;
           created_at?: string;
@@ -368,7 +371,7 @@ export interface Database {
           hex_color: string | null;
           base_color: string | null;
           tone_family: string | null;
-          effect: 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | null;
+          effect: 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | 'translucent' | 'nude' | null;
           photo_url: string | null;
           stock: number;
           notes: string | null;
@@ -386,7 +389,7 @@ export interface Database {
           hex_color?: string | null;
           base_color?: string | null;
           tone_family?: string | null;
-          effect?: 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | null;
+          effect?: 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | 'translucent' | 'nude' | null;
           photo_url?: string | null;
           stock?: number;
           notes?: string | null;
@@ -404,7 +407,7 @@ export interface Database {
           hex_color?: string | null;
           base_color?: string | null;
           tone_family?: string | null;
-          effect?: 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | null;
+          effect?: 'matte' | 'shimmer' | 'glitter' | 'cat_eye' | 'holographic' | 'duochrome' | 'translucent' | 'nude' | null;
           photo_url?: string | null;
           stock?: number;
           notes?: string | null;
