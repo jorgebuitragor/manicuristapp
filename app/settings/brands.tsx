@@ -15,7 +15,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
 import { useConfirm } from '@/context/ConfirmContext';
-import type { PolishBrand } from '@/types/database.types';
+import type { PolishBrand } from '@/types/models';
 
 function BrandRow({
   brand,

@@ -27,7 +27,7 @@ import { useConfirm } from '@/context/ConfirmContext';
 import { useDrawingPad } from '@/context/DrawingPadContext';
 import { usePolishLabels } from '@/context/PolishLabelsContext';
 import { PolishEffectOverlay } from '@/components/ui/PolishEffectOverlay';
-import type { NailPolish, PolishBrand, NailRack } from '@/types/database.types';
+import type { NailPolish, PolishBrand, NailRack } from '@/types/models';
 
 const MIN_CARD_WIDTH = 130;
 

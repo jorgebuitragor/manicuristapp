@@ -3,6 +3,7 @@ tipo: concepto
 tags: [arquitectura, supabase, base-de-datos]
 actualizado: 2026-11-13
 fuentes:
+  - types/models.ts
   - supabase/migration.sql
   - types/database.types.ts
 ---
@@ -15,7 +16,7 @@ Postgres en Supabase. El archivo `supabase/migration.sql` es **un único script 
 
 **Cómo probar una migración en local:** hay un Postgres 16 disponible en el contenedor. El 2026-11-13 se probó así: cluster temporal con `initdb`, simulaciones mínimas de `auth` (`auth.users`, `auth.uid()` leyendo `request.jwt.claim.sub`) y `storage` (`buckets`, `objects` con RLS, `foldername()`), roles `anon`/`authenticated`, y después `SET ROLE authenticated` + `set_config('request.jwt.claim.sub', …)` para comprobar las políticas como cada usuario.
 
-Los tipos viven en `types/database.types.ts` (exporta `Tables<>`, `TablesInsert<>`, `TablesUpdate<>` y alias como `Client`, `AppointmentWithRelations`).
+Tipos: `types/database.types.ts` (generado: `Database`, `Tables<>`, `TablesInsert<>`, `TablesUpdate<>`) y `types/models.ts` (dominio, escrito a mano).
 
 ## Tablas
 
@@ -60,7 +61,7 @@ Todas las de datos tienen `organization_id → organizations ON DELETE CASCADE` 
 npx supabase gen types typescript --project-id <id> > types/database.types.ts
 ```
 
-> [!warning] `database.types.ts` mezcla código generado con alias escritos a mano al final (`Client`, `AppointmentWithRelations`…); regenerarlo los borra. `Functions` ya declara las dos RPC. Ver [[discrepancias]].
+Regenerar es seguro: `database.types.ts` solo contiene lo generado (más `Functions` con las RPC). Los tipos de dominio (`Client`, `AppointmentWithRelations`, `OrgType`, `PolishEffect`…) viven en `types/models.ts` y se importan de ahí.
 
 ## Relacionado
 

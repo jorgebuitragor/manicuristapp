@@ -146,7 +146,7 @@ function PickerSheet({ open, title, onCancel, onConfirm, children }: PickerSheet
       onRequestClose={onCancel}
       supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
     >
-      <Animated.View style={[styles.backdropFill, { opacity: backdropOpacity }]}>
+      <Animated.View style={[styles.backdropFill, { opacity: backdropOpacity, backgroundColor: colors.backdrop }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} />
       </Animated.View>
 
@@ -155,6 +155,7 @@ function PickerSheet({ open, title, onCancel, onConfirm, children }: PickerSheet
           <Animated.View
             style={[
               styles.dialog,
+              { shadowColor: colors.shadow },
               { width: dialogWidth, backgroundColor: colors.card, borderColor: colors.border },
               { transform: [{ scale }], opacity: backdropOpacity },
             ]}
@@ -195,10 +196,9 @@ export function DatePickerField({
   label, value, onChange, minimumDate, maximumDate, borderTop,
 }: DatePickerFieldProps) {
   const { colors } = useTheme();
-  const { lang } = useI18n();
+  const { lang, locale } = useI18n();
   const [open, setOpen] = useState(false);
   const [staged, setStaged] = useState(value);
-  const locale = lang === 'en' ? 'en-US' : 'es-ES';
 
   const displayValue = value.toLocaleDateString(locale, {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
@@ -273,9 +273,8 @@ export function TimePickerField({
   label, value, onChange, minuteInterval = 5, borderTop,
 }: TimePickerFieldProps) {
   const { colors } = useTheme();
-  const { lang } = useI18n();
+  const { lang, locale } = useI18n();
   const { is24Hour } = useTimeFormat();
-  const locale = lang === 'en' ? 'en-US' : 'es-ES';
 
   const [open, setOpen] = useState(false);
   const [stagedHour24, setStagedHour24] = useState(value.getHours());
@@ -399,9 +398,8 @@ function daysInMonth(month: number, year: number) {
 }
 
 export function BirthdayPickerField({ label, value, onChange, borderTop }: BirthdayPickerFieldProps) {
-  const { lang } = useI18n();
+  const { lang, locale } = useI18n();
   const { colors } = useTheme();
-  const locale = lang === 'en' ? 'en-US' : 'es-ES';
 
   const defaultDate = value ?? new Date(CURRENT_YEAR - 30, 0, 1);
 
@@ -526,7 +524,6 @@ const styles = StyleSheet.create({
   // Dialog
   backdropFill: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   dialogWrapper: {
     ...StyleSheet.absoluteFillObject,
@@ -543,7 +540,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
     shadowRadius: 24,

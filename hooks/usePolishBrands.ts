@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useOrganization } from '@/context/OrganizationContext';
-import type { PolishBrand } from '@/types/database.types';
+import type { PolishBrand } from '@/types/models';
 
 export const POLISH_BRANDS_KEY = ['polish-brands'] as const;
 

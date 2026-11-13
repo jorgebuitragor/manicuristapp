@@ -42,6 +42,7 @@ export function ToastRenderer() {
     <Animated.View
       style={[
         styles.container,
+        { shadowColor: colors.shadow },
         {
           top: insets.top + 12,
           backgroundColor: palette.bg,
@@ -76,7 +77,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 14,
     borderWidth: 1,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 8,

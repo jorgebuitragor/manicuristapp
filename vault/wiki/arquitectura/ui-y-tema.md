@@ -38,7 +38,9 @@ Toda pieza de UI reutilizable vive en `components/ui/` con sus propios estilos. 
 
 > [!note] Desde `47f7412` `CLAUDE.md` raíz lista todo el catálogo.
 
-> [!warning] Hay ~34 líneas con colores HEX literales en `app/` y `components/` (algunas son paletas legítimas del selector de color). Ver [[deuda-tecnica]].
+Tokens añadidos el 2026-11-13: `dangerStrong`, `warning`, `success` (fondos sólidos con texto `onPrimary`, p.ej. el banner de conexión), `backdrop` (detrás de modales; más opaco en oscuro), `birthday` / `birthdayMuted` (calendario).
+
+**Colores literales aceptados** (no dependen del modo claro/oscuro): paletas del selector de color, efectos sobre el swatch del esmalte (`PolishEffectOverlay` y brillos con alpha), logos de terceros (Google `#4285F4`, WhatsApp `#25D366`), visor de fotos a pantalla completa (negro) y `SplashAnimation`.
 
 ## Relacionado
 

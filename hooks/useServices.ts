@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useOrganization } from '@/context/OrganizationContext';
-import type { Service, TablesInsert, TablesUpdate } from '@/types/database.types';
+import type { Service } from '@/types/models';
+import type { TablesInsert, TablesUpdate } from '@/types/database.types';
 
 const SERVICES_KEY = ['services'];
 

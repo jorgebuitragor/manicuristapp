@@ -50,7 +50,7 @@ function PhotoSourceSheet({ visible, onCamera, onGallery, onClose }: PhotoSource
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={styles.sheetOverlay} onPress={onClose}>
+      <Pressable style={[styles.sheetOverlay, { backgroundColor: colors.backdrop }]} onPress={onClose}>
         <Animated.View
           style={[
             styles.sheetContainer,
@@ -291,7 +291,6 @@ const styles = StyleSheet.create({
   // Sheet
   sheetOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {

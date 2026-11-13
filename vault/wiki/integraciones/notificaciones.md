@@ -30,7 +30,7 @@ Al arrancar (`app/_layout.tsx`): `setupNotifications()` (handler + canal Android
 
 Preferencias (activar recordatorios, minutos, activar cumpleaños) en `NotificationContext` → [[preferencias-locales]].
 
-> [!warning] Los textos (`'📅 Cita próxima'`, `'En N min: …'`, `'🎂 ¡Cumpleaños!'`) están en español fijo, sin [[i18n]].
+Los textos salen de [[i18n]] (`notifications.*`) con `translate(lang, key, vars)`; quien programa la notificación pasa el idioma activo. Una notificación ya programada conserva el idioma con el que se creó.
 
 > [!question] Al ser locales, las notificaciones solo existen en el dispositivo donde se creó/editó la cita. En un salón con varias profesionales ([[roadmap-salon-multi-profesional]]) o al reinstalar la app, no se replican.
 

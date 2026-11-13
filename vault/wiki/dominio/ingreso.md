@@ -3,6 +3,7 @@ tipo: entidad
 tags: [dominio, ingresos, finanzas]
 actualizado: 2026-11-13
 fuentes:
+  - lib/dates.ts
   - hooks/useIncomes.ts
   - app/(tabs)/incomes.tsx
   - components/ui/IncomeConfirmModal.tsx
@@ -42,9 +43,9 @@ Dinero cobrado, normalmente asociado a una [[cita]] completada.
 
 Toda la agregación se hace **en el cliente** sobre las filas descargadas.
 
-> [!warning] Las etiquetas del gráfico (`'Lun'…'Dom'`, `'Ene'…'Dic'`, `S1…S4`) están en español dentro del hook, sin pasar por [[i18n]]. Ver [[deuda-tecnica]].
+- Etiquetas del gráfico con `Intl` según el idioma (`locale` va en la query key para que cambien al cambiar de idioma); semanas del mes con `incomes.chart.weekPrefix` (S/W).
 
-> [!question] Las fechas "hoy"/"inicio de semana" se calculan con `toISOString().slice(0,10)` (UTC). Cerca de medianoche en zonas como América (UTC-5) el día puede desfasarse. Verificar.
+- "Hoy", "inicio de semana" y la **fecha del ingreso** se calculan en la zona del dispositivo con `lib/dates.ts`. Antes se usaba UTC: en Colombia, un cobro después de las 19:00 quedaba con fecha de mañana (y el `DEFAULT CURRENT_DATE` de la BD también es UTC, por eso ahora la app envía `date`).
 
 ## Moneda
 

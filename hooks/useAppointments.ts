@@ -1,7 +1,8 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useOrganization } from '@/context/OrganizationContext';
-import type { Appointment, AppointmentWithRelations } from '@/types/database.types';
+import type { Appointment, AppointmentWithRelations } from '@/types/models';
 
 export const APPOINTMENTS_KEY = ['appointments'] as const;
 
@@ -237,6 +238,33 @@ export function useDeleteAppointment() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: APPOINTMENTS_KEY }),
   });
+}
+
+export function useUpdateAppointmentDesignPhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, design_photo_url }: { id: string; design_photo_url: string | null }) => {
+      const { error } = await supabase.from('appointments').update({ design_photo_url }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: APPOINTMENTS_KEY }),
+  });
+}
+
+/** Refresca la cache de citas cuando cambian en el servidor (otro dispositivo, otra profesional). */
+export function useAppointmentsRealtime() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const channel = supabase
+      .channel('appointments-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
+        qc.invalidateQueries({ queryKey: APPOINTMENTS_KEY });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
 }
 
 export function useAddServiceToAppointment() {

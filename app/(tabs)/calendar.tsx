@@ -12,17 +12,14 @@ import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { ThemedCalendar } from '@/components/ui/ThemedCalendar';
 import { CalendarNotesPad } from '@/components/ui/CalendarNotesPad';
-import { useAppointmentsByDate, useAppointmentsByDateRange, useSearchAppointments } from '@/hooks/useAppointments';
+import { useAppointmentsByDate, useAppointmentsByDateRange, useSearchAppointments, useAppointmentsRealtime } from '@/hooks/useAppointments';
 import { useClients } from '@/hooks/useClients';
-import { supabase } from '@/lib/supabase';
-import { queryClient } from '@/lib/queryClient';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useDrawingPad } from '@/context/DrawingPadContext';
 import { useTimeFormat } from '@/context/TimeFormatContext';
-import type { AppointmentWithRelations, Client } from '@/types/database.types';
+import type { AppointmentWithRelations, Client } from '@/types/models';
 
-const BIRTHDAY_COLOR = '#E91E63';
 
 type CalendarView = 'day' | 'week';
 
@@ -64,11 +61,10 @@ const STATUS_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 function TimelineBlock({ apt, onPress }: { apt: AppointmentWithRelations; onPress: () => void }) {
   const { colors } = useTheme();
-  const { lang } = useI18n();
+  const { lang, locale } = useI18n();
   const { is24Hour } = useTimeFormat();
   const mins = durationMin(apt.start_time, apt.end_time);
   const height = Math.max(56, mins * 1.2);
-  const locale = lang === 'en' ? 'en-US' : 'es-ES';
 
   const blockBg: Record<string, string> = {
     pending: colors.primary,
@@ -110,10 +106,11 @@ function TimelineBlock({ apt, onPress }: { apt: AppointmentWithRelations; onPres
 
 function BirthdayBanner({ clients }: { clients: Client[] }) {
   const { t } = useI18n();
+  const { colors } = useTheme();
   return (
-    <View style={styles.birthdayBanner}>
-      <Ionicons name="gift-outline" size={16} color={BIRTHDAY_COLOR} />
-      <ThemedText style={[styles.birthdayText, { color: BIRTHDAY_COLOR }]}>
+    <View style={[styles.birthdayBanner, { backgroundColor: colors.birthdayMuted }]}>
+      <Ionicons name="gift-outline" size={16} color={colors.birthday} />
+      <ThemedText style={[styles.birthdayText, { color: colors.birthday }]}>
         {t('calendar.birthdayBanner')}: {clients.map((c) => c.name).join(', ')}
       </ThemedText>
     </View>
@@ -122,9 +119,8 @@ function BirthdayBanner({ clients }: { clients: Client[] }) {
 
 function SearchResultRow({ apt, onPress }: { apt: AppointmentWithRelations; onPress: () => void }) {
   const { colors } = useTheme();
-  const { lang } = useI18n();
+  const { lang, locale } = useI18n();
   const { is24Hour } = useTimeFormat();
-  const locale = lang === 'en' ? 'en-US' : 'es-ES';
   const statusBg: Record<string, string> = {
     pending: colors.statusPending,
     completed: colors.statusCompleted,
@@ -199,20 +195,11 @@ export default function CalendarScreen() {
   const { data: searchResults, isLoading: searchLoading } = useSearchAppointments(searchQuery);
 
   const { colors } = useTheme();
-  const { t, lang } = useI18n();
+  const { t, lang, locale } = useI18n();
   const { drawingPadEnabled } = useDrawingPad();
   const { is24Hour } = useTimeFormat();
-  const locale = lang === 'en' ? 'en-US' : 'es-ES';
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('appointments-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
+  useAppointmentsRealtime();
 
   useEffect(() => {
     if (searchActive) {
@@ -238,7 +225,7 @@ export default function CalendarScreen() {
         ...(result[date] ?? {}),
         dots: [
           ...(result[date]?.dots ?? []),
-          { key: `bday-${bClients[0].id}`, color: BIRTHDAY_COLOR, selectedColor: '#fff' },
+          { key: `bday-${bClients[0].id}`, color: colors.birthday, selectedColor: colors.onPrimary },
         ],
       };
     }
@@ -345,8 +332,8 @@ export default function CalendarScreen() {
               <View style={styles.weekDayApts}>
                 {(birthdayMap[day] ?? []).length > 0 && (
                   <View style={styles.weekBirthday}>
-                    <Ionicons name="gift-outline" size={11} color={BIRTHDAY_COLOR} />
-                    <ThemedText variant="caption" style={[styles.weekBirthdayText, { color: BIRTHDAY_COLOR }]} numberOfLines={1}>
+                    <Ionicons name="gift-outline" size={11} color={colors.birthday} />
+                    <ThemedText variant="caption" style={[styles.weekBirthdayText, { color: colors.birthday }]} numberOfLines={1}>
                       {(birthdayMap[day] ?? []).map((c) => c.name).join(', ')}
                     </ThemedText>
                   </View>
@@ -589,7 +576,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 15 },
   birthdayBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FCE4EC', borderRadius: 10,
+    borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4,
   },
   birthdayText: { fontSize: 13, fontWeight: '600', flex: 1 },

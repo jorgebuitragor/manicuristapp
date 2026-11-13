@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { translate, type LangCode } from '@/lib/i18n';
 
 type NotificationsModule = typeof import('expo-notifications');
 
@@ -63,6 +64,7 @@ export async function scheduleAppointmentReminder(
   clientName: string,
   serviceNames: string[],
   minutesBefore: number,
+  lang: LangCode = 'es',
 ): Promise<void> {
   const Notifications = await getNotificationsModule();
   if (!Notifications) return;
@@ -74,12 +76,12 @@ export async function scheduleAppointmentReminder(
   if (triggerDate <= new Date()) return;
 
   const body = serviceNames.length > 0
-    ? `En ${minutesBefore} min: ${clientName} — ${serviceNames.join(', ')}`
-    : `En ${minutesBefore} min: ${clientName}`;
+    ? translate(lang, 'notifications.reminder.bodyWithServices', { minutes: minutesBefore, client: clientName, services: serviceNames.join(', ') })
+    : translate(lang, 'notifications.reminder.body', { minutes: minutesBefore, client: clientName });
 
   await Notifications.scheduleNotificationAsync({
     identifier: `apt-${appointmentId}`,
-    content: { title: '📅 Cita próxima', body, sound: true },
+    content: { title: translate(lang, 'notifications.reminder.title'), body, sound: true },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: triggerDate,
@@ -98,6 +100,7 @@ export async function scheduleBirthdayNotification(
   clientId: string,
   clientName: string,
   birthday: string, // 'YYYY-MM-DD'
+  lang: LangCode = 'es',
 ): Promise<void> {
   const Notifications = await getNotificationsModule();
   if (!Notifications) return;
@@ -114,8 +117,8 @@ export async function scheduleBirthdayNotification(
   await Notifications.scheduleNotificationAsync({
     identifier: `birthday-${clientId}`,
     content: {
-      title: '🎂 ¡Cumpleaños!',
-      body: `Hoy es el cumpleaños de ${clientName} 🎉`,
+      title: translate(lang, 'notifications.birthday.title'),
+      body: translate(lang, 'notifications.birthday.body', { client: clientName }),
       sound: true,
     },
     trigger: {

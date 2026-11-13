@@ -48,7 +48,7 @@ Proyecto `manicuristapp` (`nkispboetijemfpfahbl`). Lectura del esquema, funcione
 ## Tipos
 
 - [x] `Functions` declaraba `Record<string, never>` pese a usarse una RPC → tipadas `create_organization` y `get_my_org_id`; quitado el `as any` del onboarding. *`47f7412`*
-- [ ] `database.types.ts` sigue mezclando código generado con alias escritos a mano al final (`Client`, `AppointmentWithRelations`…): regenerar los tipos los borra. Opción: mover los alias a `types/models.ts`. → [[esquema-bd]]
+- [x] `database.types.ts` mezclaba código generado con alias y uniones escritas a mano → movidos a `types/models.ts`, que además acota `status`/`type`/`role`/`effect` (el generador los tipa como `string`). Verificado simulando una regeneración: `tsc` sin errores. *2026-11-13* → [[esquema-bd]]
 
 ## `CLAUDE.md` / `AGENTS.md` desactualizados
 

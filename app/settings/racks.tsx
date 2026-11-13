@@ -15,7 +15,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
 import { useConfirm } from '@/context/ConfirmContext';
-import type { NailRack } from '@/types/database.types';
+import type { NailRack } from '@/types/models';
 
 function RackRow({
   rack,

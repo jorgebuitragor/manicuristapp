@@ -14,16 +14,15 @@ import { ThemedSection } from '@/components/ui/ThemedSection';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { BirthdayPickerField } from '@/components/ui/AppDatePicker';
 import { scheduleBirthdayNotification } from '@/lib/notifications';
+import { toLocalISODate } from '@/lib/dates';
 
-function toISODate(d: Date): string {
-  return d.toISOString().split('T')[0];
-}
+
 
 export default function NewClientScreen() {
   const router = useRouter();
   const createClient = useCreateClient();
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { showError } = useError();
   const { birthdayNotificationsEnabled } = useNotificationSettings();
 
@@ -44,11 +43,11 @@ export default function NewClientScreen() {
       phone: phone.trim() || undefined,
       notes: notes.trim() || undefined,
       allergies: allergies.trim() || undefined,
-      birthday: birthday ? toISODate(birthday) : null,
+      birthday: birthday ? toLocalISODate(birthday) : null,
     });
 
     if (birthday && birthdayNotificationsEnabled) {
-      scheduleBirthdayNotification(created.id, name.trim(), toISODate(birthday));
+      scheduleBirthdayNotification(created.id, name.trim(), toLocalISODate(birthday), lang);
     }
 
     router.back();

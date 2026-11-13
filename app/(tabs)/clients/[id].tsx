@@ -22,10 +22,11 @@ import { useAppointmentsByClient } from '@/hooks/useAppointments';
 import { useTimeFormat } from '@/context/TimeFormatContext';
 import { BirthdayPickerField } from '@/components/ui/AppDatePicker';
 import { scheduleBirthdayNotification, cancelBirthdayNotification } from '@/lib/notifications';
-import type { AppointmentWithRelations } from '@/types/database.types';
+import { toLocalISODate } from '@/lib/dates';
+import type { AppointmentWithRelations } from '@/types/models';
 
-function formatDateTime(iso: string, is24Hour: boolean) {
-  return new Date(iso).toLocaleDateString('es-ES', {
+function formatDateTime(iso: string, is24Hour: boolean, locale: string) {
+  return new Date(iso).toLocaleDateString(locale, {
     day: 'numeric', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: !is24Hour,
   });
@@ -33,7 +34,7 @@ function formatDateTime(iso: string, is24Hour: boolean) {
 
 function HistoryCard({ apt, onPress }: { apt: AppointmentWithRelations; onPress: () => void }) {
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { is24Hour } = useTimeFormat();
 
   const statusBg: Record<string, string> = {
@@ -60,7 +61,7 @@ function HistoryCard({ apt, onPress }: { apt: AppointmentWithRelations; onPress:
         <View style={[styles.historyDot, { backgroundColor: colors.primary }]} />
       )}
       <View style={styles.historyContent}>
-        <ThemedText variant="caption" style={styles.historyDate}>{formatDateTime(apt.start_time, is24Hour)}</ThemedText>
+        <ThemedText variant="caption" style={styles.historyDate}>{formatDateTime(apt.start_time, is24Hour, locale)}</ThemedText>
         {apt.services.length > 0 ? <ThemedText variant="caption" tone="primary">{apt.services.map((service) => service.name).join(' · ')}</ThemedText> : null}
       </View>
       <ThemedView style={[styles.historyBadge, { backgroundColor: statusBg[apt.status] ?? colors.border }]}>
@@ -113,7 +114,7 @@ export default function ClientDetailScreen() {
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, lang, locale } = useI18n();
   const { showConfirm } = useConfirm();
   const { birthdayNotificationsEnabled } = useNotificationSettings();
 
@@ -136,7 +137,7 @@ export default function ClientDetailScreen() {
 
   async function handleSave() {
     if (!name.trim()) return;
-    const birthdayISO = birthday ? birthday.toISOString().split('T')[0] : null;
+    const birthdayISO = birthday ? toLocalISODate(birthday) : null;
     await updateClient.mutateAsync({
       id,
       name: name.trim(),
@@ -147,7 +148,7 @@ export default function ClientDetailScreen() {
     });
 
     if (birthdayISO && birthdayNotificationsEnabled) {
-      scheduleBirthdayNotification(id, name.trim(), birthdayISO);
+      scheduleBirthdayNotification(id, name.trim(), birthdayISO, lang);
     } else if (!birthdayISO) {
       cancelBirthdayNotification(id);
     }
@@ -170,7 +171,7 @@ export default function ClientDetailScreen() {
   }
 
   function formatBirthday(d: Date): string {
-    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   if (isLoading) {

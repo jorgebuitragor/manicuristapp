@@ -1,4 +1,4 @@
-// Auto-generated types para Supabase.
+// Tipos generados de Supabase. NO editar a mano: los tipos de dominio van en types/models.ts.
 // Regenerar con: npx supabase gen types typescript --project-id <project-id> > types/database.types.ts
 
 export type Json =
@@ -99,7 +99,7 @@ export interface Database {
           phone: string | null;
           notes: string | null;
           allergies: string | null;
-          birthday: string | null; // 'YYYY-MM-DD'
+          birthday: string | null;
           organization_id: string | null;
           created_at: string;
         };
@@ -516,29 +516,3 @@ export type TablesInsert<T extends keyof Database['public']['Tables']> =
 
 export type TablesUpdate<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Update'];
-
-export type Organization = Tables<'organizations'>;
-export type OrganizationMember = Tables<'organization_members'>;
-export type Professional = Tables<'professionals'>;
-export type Client = Tables<'clients'>;
-export type Service = Tables<'services'>;
-export type PolishBrand = Tables<'nail_polish_brands'>;
-export type NailRack = Tables<'nail_racks'>;
-export type Appointment = Tables<'appointments'>;
-export type NailPolish = Tables<'nail_polishes'>;
-export type Income = Tables<'incomes'>;
-export type PolishBaseColor = Tables<'polish_base_colors'>;
-export type PolishToneFamily = Tables<'polish_tone_families'>;
-
-export type OrgType = 'home_studio' | 'salon';
-export type AppointmentStatus = 'pending' | 'completed' | 'cancelled';
-
-export type AppointmentPolishSummary = Pick<NailPolish, 'id' | 'color_name' | 'brand' | 'hex_color' | 'polish_code'>;
-
-export type AppointmentWithRelations = Appointment & {
-  client: Client;
-  professional: Professional | null;
-  service: Service | null;
-  services: Service[];
-  polishes: AppointmentPolishSummary[];
-};

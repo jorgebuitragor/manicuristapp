@@ -3,7 +3,8 @@ import { View, TouchableOpacity, StyleSheet, ScrollView, Switch, ActivityIndicat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/auth';
+import { useCurrentProfessional } from '@/hooks/useProfessionals';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { ThemedDropdown } from '@/components/ui/ThemedDropdown';
 import { useTheme } from '@/context/ThemeContext';
@@ -100,22 +101,9 @@ export default function SettingsScreen() {
   const { reminderEnabled, setReminderEnabled, reminderMinutes, setReminderMinutes, birthdayNotificationsEnabled, setBirthdayNotificationsEnabled } = useNotificationSettings();
   const { isConnected: gcalConnected, isLoading: gcalLoading, isConnecting, connect: gcalConnect, disconnect: gcalDisconnect } = useGoogleCalendarConnection();
   const { organization } = useOrganization();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [professionalName, setProfessionalName] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUserEmail(user?.email ?? null);
-      if (user) {
-        supabase
-          .from('professionals')
-          .select('name')
-          .eq('user_id', user.id)
-          .maybeSingle()
-          .then(({ data }) => setProfessionalName(data?.name ?? null));
-      }
-    });
-  }, []);
+  const { data: me } = useCurrentProfessional();
+  const userEmail = me?.email ?? null;
+  const professionalName = me?.name ?? null;
 
   const themeOptions: { value: ColorScheme; label: string }[] = [
     { value: 'system', label: t('settings.theme.system') },
@@ -135,7 +123,7 @@ export default function SettingsScreen() {
       message: t('settings.logout.confirm.message'),
       confirmLabel: t('settings.logout.confirm.ok'),
       variant: 'danger',
-      onConfirm: () => supabase.auth.signOut(),
+      onConfirm: () => signOut(),
     });
   }
 

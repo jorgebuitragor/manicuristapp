@@ -26,6 +26,8 @@ Sincronización **unidireccional** (app → Google) de las [[cita|citas]] con el
 | `syncAppointmentToCalendar` | Crear / reprogramar cita | Si hay `google_event_id` → update; si no → create y guarda el id en `appointments.google_event_id` |
 | `deleteAppointmentFromCalendar` | Borrar cita | Borra el evento |
 
+> [!note] Hasta 2026-11-13 guardar `google_event_id` no invalidaba la cache: si se reprogramaba la cita poco después de crearla, la app no veía el id y **creaba un segundo evento**. Corregido.
+
 > [!warning] Los tokens se guardan **por dispositivo**, pero `google_event_id` se guarda en la cita (compartida por la org). En un salón, si otra profesional reprograma la cita desde su dispositivo, intentaría actualizar un evento de un calendario ajeno. Relevante para [[roadmap-salon-multi-profesional]].
 
 ## Estado conocido (de `TECH_DEBT.md`)

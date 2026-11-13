@@ -25,6 +25,15 @@ export interface ThemeColors {
   danger: string;
   dangerMuted: string;
   dangerBorder: string;
+  /** Fondos sólidos con texto `onPrimary` encima (banner de conexión, etc.) */
+  dangerStrong: string;
+  warning: string;
+  success: string;
+  /** Fondo semitransparente detrás de modales y bottom sheets */
+  backdrop: string;
+  /** Cumpleaños de clientes en el calendario */
+  birthday: string;
+  birthdayMuted: string;
 }
 
 export const lightColors: ThemeColors = {
@@ -50,6 +59,12 @@ export const lightColors: ThemeColors = {
   danger: '#ef4444',
   dangerMuted: '#fef2f2',
   dangerBorder: '#fecaca',
+  dangerStrong: '#c0392b',
+  warning: '#e67e22',
+  success: '#27ae60',
+  backdrop: 'rgba(0,0,0,0.45)',
+  birthday: '#E91E63',
+  birthdayMuted: '#FCE4EC',
 };
 
 export const darkColors: ThemeColors = {
@@ -75,4 +90,10 @@ export const darkColors: ThemeColors = {
   danger: '#f87171',
   dangerMuted: '#3b1212',
   dangerBorder: '#7f1d1d',
+  dangerStrong: '#c0392b',
+  warning: '#e67e22',
+  success: '#27ae60',
+  backdrop: 'rgba(0,0,0,0.6)',
+  birthday: '#F48FB1',
+  birthdayMuted: '#3d1426',
 };

@@ -54,11 +54,12 @@ context/              # Theme, I18n, Organization, Currency, TimeFormat, PolishL
                       # DrawingPad, Notification, Toast, Confirm, Error
 hooks/                # Hooks TanStack Query (useAppointments, useClients, usePolishes,
                       # useIncomes, useServices, useNailRacks, usePolishBrands,
-                      # usePolishLabels, usePhotoStorage, useGoogleCalendar)
-lib/                  # supabase, queryClient, networkConfig, theme, i18n,
+                      # usePolishLabels, useProfessionals, usePhotoStorage, useGoogleCalendar)
+lib/                  # supabase, auth, queryClient, networkConfig, theme, i18n, dates,
                       # appointmentStateMachine, notifications, googleCalendar
 types/
-  database.types.ts   # Tipos de Supabase (ver nota en "Database schema")
+  database.types.ts   # Tipos GENERADOS de Supabase — no editar a mano
+  models.ts           # Tipos de dominio (Client, AppointmentWithRelations, OrgType…)
 supabase/
   migration.sql       # Esquema completo, acumulativo e idempotente por secciones
 vault/                # Wiki de conocimiento del proyecto (ver final de este archivo)
@@ -125,8 +126,11 @@ text · textSecondary · textTertiary
 border · inputBackground · tabBar
 shadow · overlay
 statusPending/Text · statusCompleted/Text · statusCancelled/Text
-danger · dangerMuted · dangerBorder
+danger · dangerMuted · dangerBorder · dangerStrong
+warning · success · backdrop · birthday · birthdayMuted
 ```
+
+**Excepciones aceptadas** a "nunca hardcodear colores": paletas del selector de color, efectos dibujados sobre el swatch de un esmalte (`PolishEffectOverlay`, brillos blancos/negros con alpha), colores de marca de terceros (Google, WhatsApp), el visor de fotos a pantalla completa (siempre negro) y la animación de splash. Todo lo que dependa del modo claro/oscuro va en `lib/theme.ts`.
 
 ### Componentes existentes — usar antes de crear nuevos
 
@@ -170,8 +174,11 @@ danger · dangerMuted · dangerBorder
 ## Key conventions
 
 - **Path alias**: `@/` maps to project root (e.g. `import { supabase } from '@/lib/supabase'`)
-- **Typed DB access**: always use `Tables<'table_name'>`, `TablesInsert<>`, `TablesUpdate<>` from `@/types/database.types`
-- **Server state**: every Supabase read/write lives in a hook under `hooks/`. No inline `supabase` calls inside screens.
+- **Typed DB access**: entidades desde `@/types/models` (`Client`, `NailPolish`, `AppointmentWithRelations`…); `TablesInsert<>` / `TablesUpdate<>` / `Database` desde `@/types/database.types`
+- **Server state**: every Supabase read/write lives in a hook under `hooks/`. No inline `supabase` calls inside screens, components or contexts.
+- **Auth**: siempre vía `@/lib/auth` (`getSession`, `onSessionChange`, `signInWithPassword`, `signUp`, `getGoogleSignInUrl`, `completeSessionFromUrl`, `getCurrentUser`, `signOut`). Nunca `supabase.auth` fuera de ese archivo.
+- **Fechas de calendario** (`YYYY-MM-DD`): usar `@/lib/dates` (`toLocalISODate`, `startOfWeekLocalISODate`…). Nunca `toISOString().slice(0, 10)`: da la fecha en UTC (día equivocado de noche en América o de madrugada en Europa).
+- **Formato de fechas/horas**: `toLocaleDateString(locale, …)` con `locale` de `useI18n()`, nunca `'es-ES'` fijo. Fuera de React: `translate(lang, key, vars)` de `@/lib/i18n`.
 - **Theming**: use `useTheme()` from `@/context/ThemeContext` for colors, never hardcode color values
 - **Localization**: use `useI18n()` from `@/context/I18nContext` for all user-facing strings
 - **Modals**: new/edit screens use `presentation: 'modal'` + `slide_from_bottom` animation (see `app/_layout.tsx`)
@@ -204,7 +211,7 @@ Storage (buckets públicos `design-photos`, `polish-photos`, `service-photos`): 
 
 Regenerate types: `npx supabase gen types typescript --project-id <id> > types/database.types.ts`
 
-> ⚠️ `database.types.ts` tiene al final alias escritos a mano (`Client`, `AppointmentWithRelations`, …) que se pierden al regenerar: cópialos de vuelta después de regenerar.
+Regenerar es seguro: los tipos escritos a mano viven en `types/models.ts`, que además acota las columnas con CHECK (`status`, `type`, `role`, `effect`) que el generador tipa como `string`.
 
 ## Environment variables
 

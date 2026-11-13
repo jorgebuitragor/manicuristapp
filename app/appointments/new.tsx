@@ -24,7 +24,7 @@ import { ThemedSection } from '@/components/ui/ThemedSection';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { DatePickerField, TimePickerField } from '@/components/ui/AppDatePicker';
 import { useTimeFormat } from '@/context/TimeFormatContext';
-import type { Service } from '@/types/database.types';
+import type { Service } from '@/types/models';
 
 function isoFromDate(d: Date) {
   return d.toISOString();
@@ -34,7 +34,7 @@ export default function NewAppointmentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ client_id?: string }>();
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, lang, locale } = useI18n();
   const { showToast } = useToast();
   const { showError } = useError();
   const { is24Hour } = useTimeFormat();
@@ -85,7 +85,7 @@ export default function NewAppointmentScreen() {
     const conflicts = await findConflictingAppointments(isoFromDate(startTime), isoFromDate(endTime), organizationId!);
     if (conflicts.length > 0) {
       const names = conflicts.map((c) => c.client?.name ?? '?').join(', ');
-      const fmt = (d: Date) => d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: !is24Hour });
+      const fmt = (d: Date) => d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: !is24Hour });
       const time = `${fmt(new Date(conflicts[0].start_time))} – ${fmt(new Date(conflicts[0].end_time))}`;
       showError(t('appointment.error.conflict.title'), t('appointment.error.conflict.message').replace('{client}', names).replace('{time}', time));
       return;
@@ -112,7 +112,7 @@ export default function NewAppointmentScreen() {
 
     // Schedule appointment reminder
     if (reminderEnabled) {
-      scheduleAppointmentReminder(created.id, isoFromDate(startTime), clientName, serviceNames, reminderMinutes);
+      scheduleAppointmentReminder(created.id, isoFromDate(startTime), clientName, serviceNames, reminderMinutes, lang);
     }
 
     // Fire-and-forget Google Calendar sync

@@ -56,3 +56,14 @@ grep "^## \[.*sync" vault/wiki/log.md | tail -1  # último sync de código
 - `migration.sql`: la sección FIX ahora también revoca `get_my_org_id` a `anon` (aviso del asesor). Re-probado en local: idempotente, 19/19 comprobaciones de RLS.
 - **La sección FIX sigue sin aplicarse en Supabase**: espera a que se publique la app.
 - Páginas tocadas: [[discrepancias]], [[fotos-y-storage]], [[servicio]].
+
+## [2026-11-13] sync | Hooks, auth, tipos, i18n, fechas y tema
+
+- **Capa única de backend**: todo el acceso a datos en `hooks/` (nuevos `useProfessionals.ts` con `useCurrentProfessional` y `useCreateOrganization`; `useUpdateAppointmentDesignPhoto` y `useAppointmentsRealtime` en `useAppointments.ts`) y todo Auth en `lib/auth.ts`. Prepara una eventual migración de Supabase (ver conversación sobre VPS propio).
+- **Bug**: Google Calendar podía crear eventos duplicados (cache sin `google_event_id`).
+- **Tipos**: `types/models.ts` con los tipos de dominio; `database.types.ts` queda solo generado. Probado simulando una regeneración.
+- **i18n**: gráfico de ingresos, notificaciones, errores del registro y fechas con `'es-ES'` fijo → idioma activo.
+- **Fechas**: `lib/dates.ts`; corregidos ingresos (resumen, estadísticas, fecha del ingreso), cumpleaños en UTC+ y meses repetidos en la vista "todo". Probado con TZ Bogotá y Madrid.
+- **Tema**: tokens `dangerStrong`, `warning`, `success`, `backdrop`, `birthday`, `birthdayMuted`; cumpleaños del calendario ya respeta el modo oscuro. Excepciones de colores literales documentadas.
+- `tsc --noEmit` sin errores. No probado en dispositivo.
+- Páginas tocadas: [[deuda-tecnica]], [[discrepancias]], [[esquema-bd]], [[estado-servidor-y-offline]], [[ui-y-tema]], [[ingreso]], [[notificaciones]], [[i18n]], [[google-calendar]], [[cliente]], [[navegacion-y-auth]].

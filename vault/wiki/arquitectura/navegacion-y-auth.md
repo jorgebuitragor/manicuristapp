@@ -3,6 +3,7 @@ tipo: concepto
 tags: [arquitectura, navegacion, auth, expo-router]
 actualizado: 2026-11-13
 fuentes:
+  - lib/auth.ts
   - app/_layout.tsx
   - app/(tabs)/_layout.tsx
   - app/(auth)/login.tsx
@@ -44,10 +45,14 @@ Espera a que carguen sesión y organización y luego:
 | Con sesión, sin org, fuera de onboarding | `/onboarding` |
 | Con sesión y org, en onboarding | `/(tabs)` |
 
+## Auth: `lib/auth.ts`
+
+Único archivo que llama a `supabase.auth`: `getSession`, `onSessionChange`, `getCurrentUser`, `signInWithPassword`, `signUp`, `getGoogleSignInUrl`, `completeSessionFromUrl`, `signOut`. Pantallas, layout y contextos usan estas funciones. Cambiar de proveedor de auth afecta solo a este archivo (más la migración de usuarios).
+
 ## Login
 
 - Email + password (`signInWithPassword`).
-- Google vía Supabase OAuth con `redirectTo: 'manicuristapp://auth-callback'`; los tokens se leen del fragmento de la URL y se llama a `setSession` (en `auth-callback.tsx` y también en el listener de deep links del layout raíz).
+- Google vía Supabase OAuth (`getGoogleSignInUrl`, redirect `manicuristapp://auth-callback`); `completeSessionFromUrl` lee los tokens del fragmento de la URL (en `auth-callback.tsx` y en el listener de deep links del layout raíz).
 
 ## Árbol de providers (de fuera a dentro)
 
