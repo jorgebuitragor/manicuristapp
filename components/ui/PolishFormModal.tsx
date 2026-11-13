@@ -18,7 +18,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
 import { useError } from '@/context/ErrorContext';
-import type { NailPolish } from '@/types/database.types';
+import type { NailPolish } from '@/types/models';
 
 function normalizeHexColor(value: string) {
   const normalized = value.trim().toUpperCase();

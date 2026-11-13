@@ -6,7 +6,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
+import { usePhotoStorage, type PhotoBucket } from '@/hooks/usePhotoStorage';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { ThemedText } from './ThemedText';
@@ -50,7 +50,7 @@ function PhotoSourceSheet({ visible, onCamera, onGallery, onClose }: PhotoSource
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={styles.sheetOverlay} onPress={onClose}>
+      <Pressable style={[styles.sheetOverlay, { backgroundColor: colors.backdrop }]} onPress={onClose}>
         <Animated.View
           style={[
             styles.sheetContainer,
@@ -107,7 +107,8 @@ function PhotoSourceSheet({ visible, onCamera, onGallery, onClose }: PhotoSource
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface PhotoPickerFieldProps {
-  bucket: string;
+  bucket: PhotoBucket;
+  /** Ruta dentro de la carpeta de la org, sin extensión (p.ej. `designs/<id>`). */
   storagePath: string;
   currentUrl?: string | null;
   onUploadComplete: (url: string) => void;
@@ -133,6 +134,7 @@ export function PhotoPickerField({
 }: PhotoPickerFieldProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const photoStorage = usePhotoStorage(bucket);
   const internalUploading = useRef(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [sourceSheetVisible, setSourceSheetVisible] = useState(false);
@@ -145,7 +147,10 @@ export function PhotoPickerField({
   }
 
   async function executeRemove() {
-    await supabase.storage.from(bucket).remove([`${storagePath}.webp`]);
+    // Se borra el objeto al que apunta la URL guardada (no se reconstruye la ruta):
+    // así también se limpian fotos subidas con un id temporal.
+    // Best-effort: si falla, igualmente se quita la referencia en la BD.
+    if (currentUrl) await photoStorage.remove(currentUrl).catch(() => {});
     onRemove?.();
   }
 
@@ -159,17 +164,10 @@ export function PhotoPickerField({
       ctx.release();
       image.release();
 
-      const path = `${storagePath}.webp`;
       const response = await fetch(compressed.uri);
       const arrayBuffer = await response.arrayBuffer();
 
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(path, arrayBuffer, { contentType: 'image/webp', upsert: true });
-
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
+      const publicUrl = await photoStorage.upload(storagePath, arrayBuffer);
       onUploadComplete(publicUrl);
       setPreviewVisible(false);
     } catch {
@@ -293,7 +291,6 @@ const styles = StyleSheet.create({
   // Sheet
   sheetOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {

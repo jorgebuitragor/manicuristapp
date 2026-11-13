@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Organization } from '@/types/database.types';
+import { getSession, onSessionChange } from '@/lib/auth';
+import type { Organization } from '@/types/models';
 
 type OrgContextValue = {
   organization: Organization | null;
@@ -40,15 +41,8 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      fetchOrg(session?.user?.id);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      fetchOrg(session?.user?.id);
-    });
-
-    return () => subscription.unsubscribe();
+    getSession().then((session) => fetchOrg(session?.user?.id));
+    return onSessionChange((session) => fetchOrg(session?.user?.id));
   }, [fetchOrg]);
 
   return (
@@ -58,9 +52,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
         organizationId: organization?.id ?? null,
         isLoading,
         refetch: () => {
-          supabase.auth.getSession().then(({ data: { session } }) => {
-            fetchOrg(session?.user?.id);
-          });
+          getSession().then((session) => fetchOrg(session?.user?.id));
         },
       }}
     >

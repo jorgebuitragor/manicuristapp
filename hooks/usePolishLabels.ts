@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useOrganization } from '@/context/OrganizationContext';
-import type { PolishBaseColor, PolishToneFamily } from '@/types/database.types';
+import type { PolishBaseColor, PolishToneFamily } from '@/types/models';
 
 export const BASE_COLORS_KEY = ['polish-base-colors'] as const;
 export const TONE_FAMILIES_KEY = ['polish-tone-families'] as const;

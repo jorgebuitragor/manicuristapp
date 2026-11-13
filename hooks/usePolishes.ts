@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useOrganization } from '@/context/OrganizationContext';
-import type { NailPolish } from '@/types/database.types';
+import type { NailPolish } from '@/types/models';
 
 export const POLISHES_KEY = ['polishes'] as const;
 

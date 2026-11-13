@@ -15,7 +15,7 @@ import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedInput } from '@/components/ui/ThemedInput';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { supabase } from '@/lib/supabase';
+import { signInWithPassword, getGoogleSignInUrl } from '@/lib/auth';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useError } from '@/context/ErrorContext';
@@ -40,30 +40,25 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const error = await signInWithPassword(email, password);
     setLoading(false);
 
-    if (error) showError(error.message);
+    if (error) showError(error);
   }
 
   async function handleGoogleLogin() {
     setGoogleLoading(true);
     try {
-      const redirectTo = 'manicuristapp://auth-callback';
+      const { url, error } = await getGoogleSignInUrl();
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo, skipBrowserRedirect: true },
-      });
-
-      if (error || !data.url) {
-        showError(error?.message ?? t('auth.error.googleFailed'));
+      if (error || !url) {
+        showError(error ?? t('auth.error.googleFailed'));
         return;
       }
 
       // Abre el browser sin interceptar — el deep link handler en _layout.tsx
       // procesa los tokens cuando Supabase redirige de vuelta a exp://...
-      await WebBrowser.openBrowserAsync(data.url);
+      await WebBrowser.openBrowserAsync(url);
     } catch {
       showError(t('auth.error.googleError'));
     } finally {

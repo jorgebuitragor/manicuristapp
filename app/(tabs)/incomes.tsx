@@ -14,8 +14,8 @@ import {
 } from '@/hooks/useIncomes';
 import { useCurrency } from '@/context/CurrencyContext';
 
-function formatDate(dateStr: string) {
-  return new Date(`${dateStr}T12:00:00`).toLocaleDateString('es-ES', {
+function formatDate(dateStr: string, locale: string) {
+  return new Date(`${dateStr}T12:00:00`).toLocaleDateString(locale, {
     weekday: 'short', day: 'numeric', month: 'short',
   });
 }
@@ -155,6 +155,7 @@ function StatsSection({ period }: { period: StatsPeriod }) {
 
 function IncomeRow({ income, onDelete }: { income: IncomeWithRelations; onDelete: () => void }) {
   const { colors } = useTheme();
+  const { locale } = useI18n();
   const { formatAmount } = useCurrency();
   const clientName = income.appointment?.client?.name ?? '—';
   const serviceNames = (income.appointment?.appointment_services ?? [])
@@ -176,7 +177,7 @@ function IncomeRow({ income, onDelete }: { income: IncomeWithRelations; onDelete
         {income.notes ? (
           <ThemedText tone="tertiary" variant="caption" numberOfLines={1}>{income.notes}</ThemedText>
         ) : null}
-        <ThemedText tone="tertiary" variant="caption">{formatDate(income.date)}</ThemedText>
+        <ThemedText tone="tertiary" variant="caption">{formatDate(income.date, locale)}</ThemedText>
       </View>
       <TouchableOpacity style={styles.rowDelete} onPress={onDelete} hitSlop={4}>
         <Ionicons name="trash-outline" size={18} color={colors.danger} />
@@ -199,7 +200,7 @@ const PERIODS: StatsPeriod[] = ['week', 'month', 'year', 'all'];
 
 export default function IncomesScreen() {
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const { data: incomes, isLoading } = useIncomes();
@@ -263,7 +264,7 @@ export default function IncomesScreen() {
         ) : (
           groups.map((group) => (
             <ThemedSection key={group.date}>
-              <ThemedText variant="sectionTitle">{formatDate(group.date)}</ThemedText>
+              <ThemedText variant="sectionTitle">{formatDate(group.date, locale)}</ThemedText>
               {group.items.map((income) => (
                 <IncomeRow key={income.id} income={income} onDelete={() => handleDelete(income)} />
               ))}

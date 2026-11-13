@@ -11,7 +11,7 @@ import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedInput } from '@/components/ui/ThemedInput';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { supabase } from '@/lib/supabase';
+import { signUp } from '@/lib/auth';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
@@ -32,33 +32,30 @@ export default function RegisterScreen() {
 
   async function handleRegister() {
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      showError('Rellena todos los campos.');
+      showError(t('auth.error.fillAllFields'));
       return;
     }
     if (password !== confirmPassword) {
-      showError('Las contraseñas no coinciden.');
+      showError(t('auth.error.passwordMismatch'));
       return;
     }
     if (password.length < 6) {
-      showError('La contraseña debe tener al menos 6 caracteres.');
+      showError(t('auth.error.passwordTooShort'));
       return;
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-    });
+    const { error, needsConfirmation } = await signUp(email, password);
     setLoading(false);
 
     if (error) {
-      showError(error.message);
-    } else if (data.session) {
+      showError(error);
+    } else if (!needsConfirmation) {
       // Email confirmation disabled — session created immediately, navigate to app
       // (expo-router will redirect automatically via the auth listener)
     } else {
       // Email confirmation enabled — user must confirm before logging in
-      showToast('Te hemos enviado un enlace de confirmación. Confírmalo y luego inicia sesión.', 'info');
+      showToast(t('auth.confirmEmail.message'), 'info');
       router.back();
     }
   }

@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useOrganization } from '@/context/OrganizationContext';
-import type { Income, TablesInsert } from '@/types/database.types';
+import { useI18n } from '@/context/I18nContext';
+import { toLocalISODate, todayLocalISODate, startOfWeekLocalISODate, fromLocalISODate, capitalize } from '@/lib/dates';
+import type { Income } from '@/types/models';
+import type { TablesInsert } from '@/types/database.types';
 
 export const INCOMES_KEY = ['incomes'] as const;
 
@@ -66,7 +69,7 @@ export function useCreateIncome() {
     mutationFn: async (payload: Omit<TablesInsert<'incomes'>, 'organization_id'>) => {
       const { data, error } = await supabase
         .from('incomes')
-        .insert({ ...payload, organization_id: organizationId })
+        .insert({ date: todayLocalISODate(), ...payload, organization_id: organizationId })
         .select()
         .single();
       if (error) throw error;
@@ -102,16 +105,16 @@ export type StatsPeriod = 'week' | 'month' | 'year' | 'all';
 
 export function useIncomeStats(period: StatsPeriod) {
   const { organizationId } = useOrganization();
+  const { t, locale } = useI18n();
   return useQuery({
-    queryKey: [...INCOMES_KEY, 'stats', period, organizationId],
+    // locale en la key: las etiquetas del gráfico dependen del idioma
+    queryKey: [...INCOMES_KEY, 'stats', period, organizationId, locale],
     queryFn: async () => {
       const now = new Date();
       let fromDate: string | null = null;
 
       if (period === 'week') {
-        const d = new Date(now);
-        d.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
-        fromDate = d.toISOString().slice(0, 10);
+        fromDate = startOfWeekLocalISODate(now);
       } else if (period === 'month') {
         fromDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
       } else if (period === 'year') {
@@ -159,15 +162,16 @@ export function useIncomeStats(period: StatsPeriod) {
 
       type ChartBar = { label: string; amount: number };
       let chartData: ChartBar[] = [];
+      const weekdayLabel = (d: Date) => capitalize(d.toLocaleDateString(locale, { weekday: 'short' }).replace('.', ''));
+      const monthLabel = (d: Date) => capitalize(d.toLocaleDateString(locale, { month: 'short' }).replace('.', ''));
 
       if (period === 'week' && fromDate) {
-        const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-        chartData = labels.map((label, i) => {
-          const d = new Date(`${fromDate}T12:00:00`);
+        chartData = Array.from({ length: 7 }, (_, i) => {
+          const d = fromLocalISODate(fromDate!);
           d.setDate(d.getDate() + i);
-          const dateStr = d.toISOString().slice(0, 10);
+          const dateStr = toLocalISODate(d);
           const amount = rows.filter((r) => r.date === dateStr).reduce((s, r) => s + Number(r.amount), 0);
-          return { label, amount };
+          return { label: weekdayLabel(d), amount };
         });
       } else if (period === 'month' && fromDate) {
         const weekAmounts: Record<number, number> = {};
@@ -176,17 +180,15 @@ export function useIncomeStats(period: StatsPeriod) {
           const weekIdx = Math.min(3, Math.floor((day - 1) / 7));
           weekAmounts[weekIdx] = (weekAmounts[weekIdx] ?? 0) + Number(row.amount);
         }
-        chartData = [0, 1, 2, 3].map((i) => ({ label: `S${i + 1}`, amount: weekAmounts[i] ?? 0 }));
+        chartData = [0, 1, 2, 3].map((i) => ({ label: `${t('incomes.chart.weekPrefix')}${i + 1}`, amount: weekAmounts[i] ?? 0 }));
       } else if (period === 'year') {
-        const labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         const monthAmounts = new Array(12).fill(0);
         for (const row of rows) {
           const month = new Date(`${row.date}T12:00:00`).getMonth();
           monthAmounts[month] += Number(row.amount);
         }
-        chartData = labels.map((label, i) => ({ label, amount: monthAmounts[i] }));
+        chartData = monthAmounts.map((amount, i) => ({ label: monthLabel(new Date(now.getFullYear(), i, 15)), amount }));
       } else {
-        const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         const monthMap: Record<string, number> = {};
         for (const row of rows) {
           const d = new Date(`${row.date}T12:00:00`);
@@ -195,10 +197,10 @@ export function useIncomeStats(period: StatsPeriod) {
         }
         const nowAll = new Date();
         chartData = Array.from({ length: 12 }, (_, i) => {
-          const d = new Date(nowAll);
-          d.setMonth(d.getMonth() - (11 - i));
+          // Día 1: con setMonth sobre un día 31 los meses cortos se desbordaban
+          const d = new Date(nowAll.getFullYear(), nowAll.getMonth() - (11 - i), 1);
           const key = `${d.getFullYear()}-${d.getMonth()}`;
-          return { label: monthLabels[d.getMonth()], amount: monthMap[key] ?? 0 };
+          return { label: monthLabel(d), amount: monthMap[key] ?? 0 };
         });
       }
 
@@ -214,11 +216,8 @@ export function useIncomeSummary() {
     queryKey: [...INCOMES_KEY, 'summary', organizationId],
     queryFn: async () => {
       const now = new Date();
-      const todayStr = now.toISOString().slice(0, 10);
-
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
-      const weekStartStr = weekStart.toISOString().slice(0, 10);
+      const todayStr = toLocalISODate(now);
+      const weekStartStr = startOfWeekLocalISODate(now);
 
       const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 

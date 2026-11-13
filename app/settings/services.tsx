@@ -18,7 +18,7 @@ import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/context/ToastContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import { useError } from '@/context/ErrorContext';
-import type { Service } from '@/types/database.types';
+import type { Service } from '@/types/models';
 
 function FieldLabel({ label, required, hint }: { label: string; required?: boolean; hint?: string }) {
   return (

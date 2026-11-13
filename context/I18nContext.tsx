@@ -1,13 +1,15 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLocales } from 'expo-localization';
-import { translations, type LangCode } from '@/lib/i18n';
+import { translations, localeFor, type LangCode } from '@/lib/i18n';
 
 type LangPreference = LangCode | 'system';
 
 interface I18nContextValue {
   t: (key: string) => string;
   lang: LangCode;
+  /** Locale de Intl ('es-ES' | 'en-US') para toLocaleDateString, etc. */
+  locale: string;
   langPreference: LangPreference;
   setLangPreference: (pref: LangPreference) => void;
 }
@@ -15,6 +17,7 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue>({
   t: (key) => key,
   lang: 'es',
+  locale: 'es-ES',
   langPreference: 'system',
   setLangPreference: () => {},
 });
@@ -56,7 +59,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <I18nContext.Provider value={{ t, lang, langPreference, setLangPreference }}>
+    <I18nContext.Provider value={{ t, lang, locale: localeFor(lang), langPreference, setLangPreference }}>
       {children}
     </I18nContext.Provider>
   );

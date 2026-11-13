@@ -9,10 +9,10 @@ import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useTimeFormat } from '@/context/TimeFormatContext';
 import { useCurrency } from '@/context/CurrencyContext';
-import type { AppointmentWithRelations } from '@/types/database.types';
+import type { AppointmentWithRelations } from '@/types/models';
 
-function formatTime(iso: string, is24Hour: boolean) {
-  return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: !is24Hour });
+function formatTime(iso: string, is24Hour: boolean, locale: string) {
+  return new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: !is24Hour });
 }
 
 function getTodayString() {
@@ -76,7 +76,7 @@ function NextAppointmentCard({
   onPress: () => void;
 }) {
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { is24Hour } = useTimeFormat();
 
   if (!next) {
@@ -100,7 +100,7 @@ function NextAppointmentCard({
           <ThemedText variant="caption" tone="primary" style={styles.nextLabel}>{t('home.next')}</ThemedText>
         </View>
         <ThemedText variant="caption" tone="primary" style={styles.nextTime}>
-          {formatTime(next.start_time, is24Hour)} – {formatTime(next.end_time, is24Hour)}
+          {formatTime(next.start_time, is24Hour, locale)} – {formatTime(next.end_time, is24Hour, locale)}
         </ThemedText>
       </View>
       <ThemedText style={[styles.nextClientName, { color: colors.primary }]}>{next.client?.name ?? '—'}</ThemedText>
@@ -117,7 +117,7 @@ function NextAppointmentCard({
 
 function AppointmentCard({ appointment, onPress }: { appointment: AppointmentWithRelations; onPress: () => void }) {
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { is24Hour } = useTimeFormat();
 
   const statusBg: Record<string, string> = {
@@ -144,7 +144,7 @@ function AppointmentCard({ appointment, onPress }: { appointment: AppointmentWit
           </View>
         </View>
         <ThemedText tone="secondary" style={styles.timeText}>
-          {formatTime(appointment.start_time, is24Hour)} – {formatTime(appointment.end_time, is24Hour)}
+          {formatTime(appointment.start_time, is24Hour, locale)} – {formatTime(appointment.end_time, is24Hour, locale)}
         </ThemedText>
         <View style={styles.cardFooter}>
           {appointment.services.length > 0 && (
@@ -210,9 +210,9 @@ export default function HomeScreen() {
   const today = getTodayString();
   const { data: appointments, isLoading, isError, error, refetch } = useAppointmentsByDate(today);
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
-  const todayFormatted = new Date().toLocaleDateString('es-ES', {
+  const todayFormatted = new Date().toLocaleDateString(locale, {
     weekday: 'long', day: 'numeric', month: 'long',
   });
 

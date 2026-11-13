@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
-import { supabase } from '@/lib/supabase';
+import { completeSessionFromUrl } from '@/lib/auth';
 import { useTheme } from '@/context/ThemeContext';
 
 export default function AuthCallbackScreen() {
@@ -14,15 +14,7 @@ export default function AuthCallbackScreen() {
       const url = await Linking.getInitialURL();
       if (!url) return;
 
-      const fragment = url.split('#')[1] ?? '';
-      const params = Object.fromEntries(new URLSearchParams(fragment));
-
-      if (params.access_token) {
-        await supabase.auth.setSession({
-          access_token: params.access_token,
-          refresh_token: params.refresh_token ?? '',
-        });
-      }
+      await completeSessionFromUrl(url);
       // AuthGuard en _layout.tsx detecta la sesión y redirige automáticamente
     }
 

@@ -16,6 +16,8 @@ import {
   type CalendarEventPayload,
 } from '@/lib/googleCalendar';
 import { supabase } from '@/lib/supabase';
+import { queryClient } from '@/lib/queryClient';
+import { APPOINTMENTS_KEY } from '@/hooks/useAppointments';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -97,10 +99,13 @@ export async function syncAppointmentToCalendar(payload: SyncPayload): Promise<v
       await updateCalendarEvent(accessToken, payload.googleEventId, payload);
     } else {
       const eventId = await createCalendarEvent(accessToken, payload);
-      await supabase
+      const { error } = await supabase
         .from('appointments')
         .update({ google_event_id: eventId })
         .eq('id', payload.appointmentId);
+      // Sin esto la cache sigue sin google_event_id y una reprogramación
+      // posterior crearía un segundo evento en vez de actualizar este.
+      if (!error) queryClient.invalidateQueries({ queryKey: APPOINTMENTS_KEY });
     }
   } catch {
     // Sync is best-effort; never throw

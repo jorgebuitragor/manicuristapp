@@ -11,7 +11,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { useClients } from '@/hooks/useClients';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
-import type { Client } from '@/types/database.types';
+import type { Client } from '@/types/models';
 
 function ClientRow({ client, onPress }: { client: Client; onPress: () => void }) {
   const { colors } = useTheme();

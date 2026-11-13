@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useOrganization } from '@/context/OrganizationContext';
-import type { NailRack } from '@/types/database.types';
+import type { NailRack } from '@/types/models';
 
 export const NAIL_RACKS_KEY = ['nail-racks'] as const;
 

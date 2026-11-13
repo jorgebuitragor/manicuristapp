@@ -23,10 +23,8 @@ Persona atendida por la organización. Es compartida por toda la [[organizacion]
 | `phone` | text | |
 | `allergies` | text | Visible en la ficha y relevante al atender |
 | `notes` | text | |
-| `birthday` | date `YYYY-MM-DD` | Dispara notificación de cumpleaños → [[notificaciones]] |
+| `birthday` | date `YYYY-MM-DD` | Dispara notificación de cumpleaños → [[notificaciones]]. Se guarda con `toLocalISODate` (antes, en zonas UTC+ quedaba un día antes) |
 | `organization_id` | uuid | [[multi-tenancy]] |
-
-> [!warning] `birthday` existe en los tipos y se usa en el código, pero no está en `supabase/migration.sql`. Ver [[discrepancias]].
 
 Borrar un cliente **borra en cascada sus citas** (`appointments.client_id ON DELETE CASCADE`).
 

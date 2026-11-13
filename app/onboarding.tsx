@@ -14,16 +14,17 @@ import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/context/I18nContext';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useError } from '@/context/ErrorContext';
-import { supabase } from '@/lib/supabase';
-import type { OrgType } from '@/types/database.types';
+import { useCreateOrganization } from '@/hooks/useProfessionals';
+import type { OrgType } from '@/types/models';
 
 type Step = 1 | 2;
 
 export default function OnboardingScreen() {
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { refetch } = useOrganization();
   const { showError } = useError();
+  const createOrganization = useCreateOrganization();
 
   const [step, setStep] = useState<Step>(1);
   const [orgType, setOrgType] = useState<OrgType | null>(null);
@@ -51,29 +52,14 @@ export default function OnboardingScreen() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user');
+      await createOrganization.mutateAsync({
+        orgName: studioName.trim(),
+        orgType: orgType!,
+        lang, // idioma de los servicios por defecto
+        professionalName: yourName.trim(),
+      });
 
-      // 1. Crear organización + membresía via función SECURITY DEFINER
-      const { data: orgId, error: rpcError } = await (supabase as any)
-        .rpc('create_organization', {
-          org_name: studioName.trim(),
-          org_type: orgType!,
-        });
-      if (rpcError) throw rpcError;
-
-      // 2. Crear perfil de profesional
-      const { error: profError } = await supabase
-        .from('professionals')
-        .insert({
-          name: yourName.trim(),
-          color: '#c084fc',
-          user_id: user.id,
-          organization_id: orgId as string,
-        });
-      if (profError) throw profError;
-
-      // 3. Actualizar contexto → AuthGuard redirige a (tabs)
+      // Actualizar contexto → AuthGuard redirige a (tabs)
       refetch();
     } catch (err: any) {
       console.error('[Onboarding] error:', JSON.stringify(err, null, 2));

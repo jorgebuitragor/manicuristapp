@@ -7,8 +7,7 @@ SplashScreen.preventAutoHideAsync();
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import * as Linking from 'expo-linking';
-import type { Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { getSession, onSessionChange, completeSessionFromUrl, type AuthSession as Session } from '@/lib/auth';
 import { queryClient, asyncStoragePersister } from '@/lib/queryClient';
 import { configureNetworkManager } from '@/lib/networkConfig';
 import { StatusBar } from 'expo-status-bar';
@@ -93,25 +92,16 @@ export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    getSession().then((session) => {
       setSession(session);
       setIsLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    const unsubscribeSession = onSessionChange(setSession);
 
     // Handle OAuth deep link redirect (e.g. Google login via Expo Go)
-    async function handleDeepLink(url: string) {
-      const fragment = url.split('#')[1] ?? '';
-      const params = Object.fromEntries(new URLSearchParams(fragment));
-      if (params.access_token) {
-        await supabase.auth.setSession({
-          access_token: params.access_token,
-          refresh_token: params.refresh_token ?? '',
-        });
-      }
+    function handleDeepLink(url: string) {
+      completeSessionFromUrl(url);
     }
 
     Linking.getInitialURL().then((url) => { if (url) handleDeepLink(url); });
@@ -125,7 +115,7 @@ export default function RootLayout() {
     }
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribeSession();
       linkSub.remove();
     };
   }, []);

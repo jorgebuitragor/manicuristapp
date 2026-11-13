@@ -5,11 +5,13 @@ import { useMutationState } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useI18n } from '@/context/I18nContext';
+import { useTheme } from '@/context/ThemeContext';
 
 type BannerState = 'hidden' | 'offline' | 'syncing' | 'reconnected';
 
 export function OfflineBanner() {
   const { t } = useI18n();
+  const { colors } = useTheme();
   const [bannerState, setBannerState] = useState<BannerState>('hidden');
   const translateY = useRef(new Animated.Value(-60)).current;
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -77,17 +79,17 @@ export function OfflineBanner() {
   if (bannerState === 'hidden') return null;
 
   const config: Record<Exclude<BannerState, 'hidden'>, { bg: string; icon: React.ComponentProps<typeof Ionicons>['name']; label: string }> = {
-    offline:     { bg: '#c0392b', icon: 'cloud-offline-outline',  label: t('offline.banner') },
-    syncing:     { bg: '#e67e22', icon: 'sync-outline',           label: t('offline.syncing') },
-    reconnected: { bg: '#27ae60', icon: 'cloud-done-outline',     label: t('offline.reconnected') },
+    offline:     { bg: colors.dangerStrong, icon: 'cloud-offline-outline',  label: t('offline.banner') },
+    syncing:     { bg: colors.warning,      icon: 'sync-outline',           label: t('offline.syncing') },
+    reconnected: { bg: colors.success,      icon: 'cloud-done-outline',     label: t('offline.reconnected') },
   };
 
   const { bg, icon, label } = config[bannerState];
 
   return (
     <Animated.View style={[styles.banner, { backgroundColor: bg, transform: [{ translateY }] }]}>
-      <Ionicons name={icon} size={16} color="#fff" />
-      <ThemedText variant="caption" style={styles.label}>{label}</ThemedText>
+      <Ionicons name={icon} size={16} color={colors.onPrimary} />
+      <ThemedText variant="caption" style={[styles.label, { color: colors.onPrimary }]}>{label}</ThemedText>
     </Animated.View>
   );
 }
@@ -106,5 +108,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
   },
-  label: { color: '#fff', fontWeight: '600' },
+  label: { fontWeight: '600' },
 });

@@ -43,7 +43,7 @@ Todo dato de Supabase pasa por **TanStack Query v5**. La cache se persiste en el
 - Mutaciones **optimistas** (con rollback en `onError`) solo en estado y reprogramación de [[cita]].
 - Errores: se lanza el `error` de Supabase; la UI lo muestra con `useError()` / `useToast()`.
 
-> [!warning] Hay llamadas a `supabase` fuera de `hooks/` (onboarding, detalle de cita, ajustes, calendario, `PhotoPickerField`, `useGoogleCalendar` escribe en `appointments`). Ver [[deuda-tecnica]].
+Todo el acceso a datos pasa por `hooks/` y todo Auth por `lib/auth.ts` (desde 2026-11-13). Única excepción: `OrganizationContext` consulta `organization_members` directamente. Esto deja una sola capa que reescribir si algún día se cambia de backend.
 
 ## Relacionado
 

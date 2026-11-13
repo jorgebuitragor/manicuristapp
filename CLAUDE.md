@@ -28,28 +28,41 @@ pnpm web            # Run in browser
 
 ```text
 app/                  # expo-router screens (file = route)
-  _layout.tsx         # Root layout: auth guard, providers
-  (auth)/             # Login / register (public)
-  (tabs)/             # Main tab navigator (authenticated)
-    index.tsx         # Home / dashboard
-    calendar.tsx      # Appointment calendar
-    clients/          # Client list
-    polishes/         # Polish inventory
+  _layout.tsx         # Root layout: AuthGuard, árbol de providers, splash
+  (auth)/             # login / register (públicas)
+  auth-callback.tsx   # Redirect OAuth (Google) → setSession
+  onboarding.tsx      # Crear organización (RPC create_organization)
+  (tabs)/             # Tab navigator (autenticado; sidebar en tablet)
+    index.tsx         # Inicio: citas del día
+    calendar.tsx      # Calendario semanal, búsqueda, notas, realtime
+    clients/          # index.tsx (lista) · [id].tsx (ficha, oculta en tabs)
+    polishes/         # index.tsx (inventario, filtros, mapa de esmaltero)
+    incomes.tsx       # Ingresos y estadísticas
     settings.tsx
   appointments/
-    new.tsx           # New appointment modal
-    [id].tsx          # Appointment detail
+    new.tsx           # Modal nueva cita
+    [id].tsx          # Detalle de cita
   clients/
-    new.tsx           # New client modal
+    new.tsx           # Modal nuevo cliente
+  polishes/
+    new.tsx · [id].tsx · edit.tsx
+  settings/
+    services.tsx · brands.tsx · racks.tsx · labels.tsx
 
-components/ui/        # Shared themed components (ThemedButton, ThemedInput…)
-context/              # ThemeContext, I18nContext
-hooks/                # TanStack Query hooks (useAppointments, useClients…)
-lib/                  # supabase.ts, queryClient.ts, theme.ts, i18n.ts
+components/ui/        # Componentes temáticos compartidos (ver tabla abajo)
+context/              # Theme, I18n, Organization, Currency, TimeFormat, PolishLabels,
+                      # DrawingPad, Notification, Toast, Confirm, Error
+hooks/                # Hooks TanStack Query (useAppointments, useClients, usePolishes,
+                      # useIncomes, useServices, useNailRacks, usePolishBrands,
+                      # usePolishLabels, useProfessionals, usePhotoStorage, useGoogleCalendar)
+lib/                  # supabase, auth, queryClient, networkConfig, theme, i18n, dates,
+                      # appointmentStateMachine, notifications, googleCalendar
 types/
-  database.types.ts   # Supabase-generated types — DO NOT hand-edit
+  database.types.ts   # Tipos GENERADOS de Supabase — no editar a mano
+  models.ts           # Tipos de dominio (Client, AppointmentWithRelations, OrgType…)
 supabase/
-  migration.sql       # DB schema
+  migration.sql       # Esquema completo, acumulativo e idempotente por secciones
+vault/                # Wiki de conocimiento del proyecto (ver final de este archivo)
 ```
 
 ## Custom components
@@ -113,8 +126,11 @@ text · textSecondary · textTertiary
 border · inputBackground · tabBar
 shadow · overlay
 statusPending/Text · statusCompleted/Text · statusCancelled/Text
-danger · dangerMuted · dangerBorder
+danger · dangerMuted · dangerBorder · dangerStrong
+warning · success · backdrop · birthday · birthdayMuted
 ```
+
+**Excepciones aceptadas** a "nunca hardcodear colores": paletas del selector de color, efectos dibujados sobre el swatch de un esmalte (`PolishEffectOverlay`, brillos blancos/negros con alpha), colores de marca de terceros (Google, WhatsApp), el visor de fotos a pantalla completa (siempre negro) y la animación de splash. Todo lo que dependa del modo claro/oscuro va en `lib/theme.ts`.
 
 ### Componentes existentes — usar antes de crear nuevos
 
@@ -130,6 +146,16 @@ danger · dangerMuted · dangerBorder
 | `ThemedDropdown` | Selector de opción |
 | `SelectableChip` | Chip seleccionable (servicios, filtros) |
 | `ScreenHeader` | Cabecera de pantalla con título y acciones |
+| `ThemedCalendar` | Calendario mensual temático |
+| `AppDatePicker` | Selector de fecha/hora |
+| `PasswordInput` | Input de contraseña con mostrar/ocultar |
+| `ColorPickerField` / `CompactColorPicker` | Selección de color HEX |
+| `PhotoPickerField` / `PhotoPreviewModal` | Subir (vía `usePhotoStorage`) y ver fotos |
+| `SwipeToDismissModal` | Bottom sheet que se cierra deslizando |
+| `PolishFormModal` / `PolishDetailModal` / `PolishEffectOverlay` | Esmaltes |
+| `IncomeConfirmModal` | Confirmar ingreso al completar una cita |
+| `CalendarNotesPad` | Notas y dibujo por día en el calendario |
+| `Toast` · `OfflineBanner` · `SplashAnimation` · `TabletQuickActionFab` | Infraestructura de UI |
 
 ### Lo que NO va en una pantalla
 
@@ -148,8 +174,11 @@ danger · dangerMuted · dangerBorder
 ## Key conventions
 
 - **Path alias**: `@/` maps to project root (e.g. `import { supabase } from '@/lib/supabase'`)
-- **Typed DB access**: always use `Tables<'table_name'>`, `TablesInsert<>`, `TablesUpdate<>` from `@/types/database.types`
-- **Server state**: every Supabase read/write lives in a hook under `hooks/`. No inline `supabase` calls inside screens.
+- **Typed DB access**: entidades desde `@/types/models` (`Client`, `NailPolish`, `AppointmentWithRelations`…); `TablesInsert<>` / `TablesUpdate<>` / `Database` desde `@/types/database.types`
+- **Server state**: every Supabase read/write lives in a hook under `hooks/`. No inline `supabase` calls inside screens, components or contexts.
+- **Auth**: siempre vía `@/lib/auth` (`getSession`, `onSessionChange`, `signInWithPassword`, `signUp`, `getGoogleSignInUrl`, `completeSessionFromUrl`, `getCurrentUser`, `signOut`). Nunca `supabase.auth` fuera de ese archivo.
+- **Fechas de calendario** (`YYYY-MM-DD`): usar `@/lib/dates` (`toLocalISODate`, `startOfWeekLocalISODate`…). Nunca `toISOString().slice(0, 10)`: da la fecha en UTC (día equivocado de noche en América o de madrugada en Europa).
+- **Formato de fechas/horas**: `toLocaleDateString(locale, …)` con `locale` de `useI18n()`, nunca `'es-ES'` fijo. Fuera de React: `translate(lang, key, vars)` de `@/lib/i18n`.
 - **Theming**: use `useTheme()` from `@/context/ThemeContext` for colors, never hardcode color values
 - **Localization**: use `useI18n()` from `@/context/I18nContext` for all user-facing strings
 - **Modals**: new/edit screens use `presentation: 'modal'` + `slide_from_bottom` animation (see `app/_layout.tsx`)
@@ -158,17 +187,31 @@ danger · dangerMuted · dangerBorder
 
 | Table | Key columns |
 | --- | --- |
-| `professionals` | id, name, email, color |
-| `clients` | id, name, phone, notes, allergies |
-| `services` | id, name, default_duration_min |
-| `appointments` | id, client_id, professional_id, service_id, start_time, end_time, status, notes, design_photo_url |
-| `appointment_services` | appointment_id, service_id (many-to-many) |
+| `organizations` | id, name, type (`home_studio` \| `salon`), owner_id |
+| `organization_members` | organization_id, user_id, role (`owner` \| `member`) |
+| `professionals` | id, name, color, user_id, organization_id |
+| `clients` | id, name, phone, notes, allergies, birthday |
+| `services` | id, name, duration (min), price, photo_url |
+| `appointments` | id, client_id, professional_id, service_id (legacy), start_time, end_time, status, notes, design_photo_url, google_event_id |
+| `appointment_services` | appointment_id, service_id (many-to-many, fuente real de servicios) |
 | `appointment_polishes` | appointment_id, nail_polish_id (many-to-many) |
-| `nail_polishes` | id, brand_id, polish_code, color_name, hex_color, rack_id, rack_position, stock |
+| `incomes` | id, appointment_id (unique), amount, notes, date |
+| `nail_polishes` | id, brand (texto legacy), brand_id, polish_code, color_name, hex_color, base_color, tone_family, effect, rack_id, rack_position, stock, photo_url, notes |
 | `nail_polish_brands` | id, name |
-| `nail_racks` | id, name |
+| `nail_racks` | id, name, max_capacity |
+| `polish_base_colors` / `polish_tone_families` | id, key (única por org), label, sort_order (+ hex_color en base) |
+
+Todas las tablas de datos tienen además `organization_id` (ver Multi-tenancy).
+
+Funciones RPC: `get_my_org_id()`, `create_organization(org_name, org_type, org_lang = 'es')`. Interna (no expuesta a la API): `seed_default_services(org_id, lang)`.
+
+Storage (buckets públicos `design-photos`, `polish-photos`, `service-photos`): las rutas **deben** empezar por `<organization_id>/` — las políticas rechazan cualquier otra. Usar siempre `usePhotoStorage`.
+
+**Cambios de esquema**: añadir una sección nueva e idempotente al final de `supabase/migration.sql` (con fecha) y ejecutarla en el SQL Editor de Supabase. Nunca crear objetos solo desde el dashboard.
 
 Regenerate types: `npx supabase gen types typescript --project-id <id> > types/database.types.ts`
+
+Regenerar es seguro: los tipos escritos a mano viven en `types/models.ts`, que además acota las columnas con CHECK (`status`, `type`, `role`, `effect`) que el generador tipa como `string`.
 
 ## Environment variables
 
@@ -202,7 +245,7 @@ La app es multi-tenant desde la raíz. Cada dato pertenece a una `organization`.
 1. Usuario se registra (email + password)
 2. Sin organización → AuthGuard redirige a `/onboarding`
 3. Onboarding: elige tipo (Home Studio / Salón) + nombre del estudio + su nombre
-4. Se llama la función RPC `create_organization(org_name, org_type)` (SECURITY DEFINER) que crea `organizations` + `organization_members` atómicamente
+4. Se llama la función RPC `create_organization(org_name, org_type)` (SECURITY DEFINER) que crea `organizations` + `organization_members` atómicamente. Es la **única** vía de alta: no hay políticas INSERT en esas tablas. También crea los 8 servicios por defecto (en el idioma de la app, sin precio). Si el usuario ya tiene org, devuelve la existente sin crear nada (reintento seguro)
 5. Se crea el perfil en `professionals` ligado al usuario y la org
 6. `OrganizationContext.refetch()` → AuthGuard redirige a `/(tabs)`
 
@@ -233,10 +276,10 @@ Entra con SU propio correo y ve los datos compartidos del salón
 | Pieza | Descripción |
 | --- | --- |
 | Tabla `org_invites` | `id, organization_id, code (unique), expires_at, max_uses, uses_count` |
-| RPC `join_organization(code TEXT)` | Valida el código y hace INSERT en `organization_members` |
+| RPC `join_organization(code TEXT)` | SECURITY DEFINER: valida el código y hace INSERT en `organization_members` (es la única vía, no hay política INSERT) |
 | Pantalla onboarding paso 1 | Agregar tercera opción: "Unirme a un salón existente" |
 | Pantalla "Invitar profesional" | En Ajustes (solo visible para owners de salón): genera y comparte el código |
-| RLS `org_invites` | Owner puede crear/ver, cualquier autenticado puede leer (para validar el código) |
+| RLS `org_invites` | Owner puede crear/ver. La validación del código se hace dentro de la RPC (no dar SELECT general, expondría todos los códigos) |
 
 ### Notas de diseño
 

@@ -413,6 +413,13 @@ const es: Dict = {
   'incomes.stats.topServices': 'Servicios más frecuentes',
   'incomes.stats.period.week': 'Esta semana',
   'incomes.stats.period.month': 'Este mes',
+  'incomes.chart.weekPrefix': 'S',
+  // Notificaciones locales
+  'notifications.reminder.title': '📅 Cita próxima',
+  'notifications.reminder.body': 'En {minutes} min: {client}',
+  'notifications.reminder.bodyWithServices': 'En {minutes} min: {client} — {services}',
+  'notifications.birthday.title': '🎂 ¡Cumpleaños!',
+  'notifications.birthday.body': 'Hoy es el cumpleaños de {client} 🎉',
   'incomes.stats.period.year': 'Este año',
   'incomes.stats.period.all': 'Todo',
   'incomes.stats.evolution': 'Evolución',
@@ -899,6 +906,13 @@ const en: Dict = {
   'incomes.stats.topServices': 'Most frequent services',
   'incomes.stats.period.week': 'This week',
   'incomes.stats.period.month': 'This month',
+  'incomes.chart.weekPrefix': 'W',
+  // Local notifications
+  'notifications.reminder.title': '📅 Upcoming appointment',
+  'notifications.reminder.body': 'In {minutes} min: {client}',
+  'notifications.reminder.bodyWithServices': 'In {minutes} min: {client} — {services}',
+  'notifications.birthday.title': '🎂 Birthday!',
+  'notifications.birthday.body': "It's {client}'s birthday today 🎉",
   'incomes.stats.period.year': 'This year',
   'incomes.stats.period.all': 'All time',
   'incomes.stats.evolution': 'Evolution',
@@ -975,3 +989,19 @@ const en: Dict = {
 };
 
 export const translations: Record<LangCode, Dict> = { es, en };
+
+/** Locale de Intl para formatear fechas y números según el idioma de la app. */
+export function localeFor(lang: LangCode): string {
+  return lang === 'en' ? 'en-US' : 'es-ES';
+}
+
+/** Reemplaza `{nombre}` en el texto por los valores dados. */
+export function interpolate(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, name) => (name in vars ? String(vars[name]) : match));
+}
+
+/** Traducción fuera de React (p.ej. en lib/notifications), donde no hay useI18n(). */
+export function translate(lang: LangCode, key: string, vars?: Record<string, string | number>): string {
+  const text = translations[lang][key] ?? key;
+  return vars ? interpolate(text, vars) : text;
+}

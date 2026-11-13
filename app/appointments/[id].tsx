@@ -26,6 +26,7 @@ import {
   useUpdateAppointmentStatus,
   useDeleteAppointment,
   useRescheduleAppointment,
+  useUpdateAppointmentDesignPhoto,
   useAddPolishToAppointment,
   useRemovePolishFromAppointment,
   useAddServiceToAppointment,
@@ -44,23 +45,22 @@ import {
 } from '@/lib/appointmentStateMachine';
 import { useCreateIncome, useUpdateIncome, useIncomeByAppointment } from '@/hooks/useIncomes';
 import { useCurrency } from '@/context/CurrencyContext';
-import { supabase } from '@/lib/supabase';
 import { DatePickerField, TimePickerField } from '@/components/ui/AppDatePicker';
 import { useTimeFormat } from '@/context/TimeFormatContext';
 
-function formatDateTime(iso: string, is24Hour: boolean) {
-  return new Date(iso).toLocaleString('es-ES', {
+function formatDateTime(iso: string, is24Hour: boolean, locale: string) {
+  return new Date(iso).toLocaleString(locale, {
     weekday: 'long', day: 'numeric', month: 'long',
     hour: '2-digit', minute: '2-digit', hour12: !is24Hour,
   });
 }
 
-function formatTime(iso: string, is24Hour: boolean) {
-  return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: !is24Hour });
+function formatTime(iso: string, is24Hour: boolean, locale: string) {
+  return new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: !is24Hour });
 }
 
-function formatTimeLocal(d: Date, is24Hour: boolean) {
-  return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: !is24Hour });
+function formatTimeLocal(d: Date, is24Hour: boolean, locale: string) {
+  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: !is24Hour });
 }
 
 const STATUS_ICON: Record<AppointmentStatus, React.ComponentProps<typeof Ionicons>['name']> = {
@@ -119,12 +119,13 @@ export default function AppointmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [incomeModalVisible, setIncomeModalVisible] = useState(false);
-  const { data: appointment, isLoading, refetch } = useAppointment(id);
+  const { data: appointment, isLoading } = useAppointment(id);
   const createIncome = useCreateIncome();
   const { data: existingIncome } = useIncomeByAppointment(id);
   const updateStatus = useUpdateAppointmentStatus();
   const deleteAppointment = useDeleteAppointment();
   const reschedule = useRescheduleAppointment();
+  const updateDesignPhoto = useUpdateAppointmentDesignPhoto();
   const addPolish = useAddPolishToAppointment();
   const removePolish = useRemovePolishFromAppointment();
   const addService = useAddServiceToAppointment();
@@ -134,7 +135,7 @@ export default function AppointmentDetailScreen() {
   const [polishPickerValue, setPolishPickerValue] = useState('');
   const [servicePickerValue, setServicePickerValue] = useState('');
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, lang, locale } = useI18n();
   const { is24Hour } = useTimeFormat();
   const { showToast } = useToast();
   const { showError } = useError();
@@ -218,7 +219,7 @@ export default function AppointmentDetailScreen() {
     );
     if (conflicts.length > 0) {
       const names = conflicts.map((c) => c.client?.name ?? '?').join(', ');
-      const time = `${formatTimeLocal(new Date(conflicts[0].start_time), is24Hour)} – ${formatTimeLocal(new Date(conflicts[0].end_time), is24Hour)}`;
+      const time = `${formatTimeLocal(new Date(conflicts[0].start_time), is24Hour, locale)} – ${formatTimeLocal(new Date(conflicts[0].end_time), is24Hour, locale)}`;
       showError(t('appointment.error.conflict.title'), t('appointment.error.conflict.message').replace('{client}', names).replace('{time}', time));
       return;
     }
@@ -237,6 +238,7 @@ export default function AppointmentDetailScreen() {
         appointment.client?.name ?? '',
         appointment.services.map((s) => s.name),
         reminderMinutes,
+        lang,
       );
     }
 
@@ -291,14 +293,12 @@ export default function AppointmentDetailScreen() {
   }
 
   async function handlePhotoUploaded(url: string) {
-    await supabase.from('appointments').update({ design_photo_url: url }).eq('id', id);
-    refetch();
+    await updateDesignPhoto.mutateAsync({ id, design_photo_url: url });
     showToast(t('appointment.toast.photoUploaded'));
   }
 
   async function handlePhotoRemoved() {
-    await supabase.from('appointments').update({ design_photo_url: null }).eq('id', id);
-    refetch();
+    await updateDesignPhoto.mutateAsync({ id, design_photo_url: null });
   }
 
   async function handleWhatsApp() {
@@ -308,8 +308,8 @@ export default function AppointmentDetailScreen() {
       showError(t('appointment.whatsapp.noPhone'));
       return;
     }
-    const dateStr = formatDateTime(appointment.start_time, is24Hour);
-    const endStr = formatTime(appointment.end_time, is24Hour);
+    const dateStr = formatDateTime(appointment.start_time, is24Hour, locale);
+    const endStr = formatTime(appointment.end_time, is24Hour, locale);
     const message = t('appointment.whatsapp.message')
       .replace('{name}', appointment.client?.name ?? '')
       .replace('{date}', dateStr)
@@ -326,8 +326,8 @@ export default function AppointmentDetailScreen() {
 
   async function handleShare() {
     if (!appointment) return;
-    const dateStr = formatDateTime(appointment.start_time, is24Hour);
-    const endStr = formatTime(appointment.end_time, is24Hour);
+    const dateStr = formatDateTime(appointment.start_time, is24Hour, locale);
+    const endStr = formatTime(appointment.end_time, is24Hour, locale);
     const servicesStr = appointment.services.length > 0
       ? appointment.services.map((s) => s.name).join(', ')
       : '—';
@@ -398,7 +398,7 @@ export default function AppointmentDetailScreen() {
             <View style={styles.infoBody}>
               <ThemedText variant="subtitle">{appointment.client?.name}</ThemedText>
               <ThemedText tone="secondary" style={styles.timeText}>
-                {formatDateTime(appointment.start_time, is24Hour)} - {formatTime(appointment.end_time, is24Hour)}
+                {formatDateTime(appointment.start_time, is24Hour, locale)} - {formatTime(appointment.end_time, is24Hour, locale)}
               </ThemedText>
               {appointment.services.length > 0 ? (
                 <ThemedText tone="primary" style={styles.serviceText}>{appointment.services.map((service) => service.name).join(' · ')}</ThemedText>

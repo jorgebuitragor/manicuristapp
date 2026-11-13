@@ -8,7 +8,7 @@ import {
   useCreatePolishToneFamily,
   useDeletePolishToneFamily,
 } from '@/hooks/usePolishLabels';
-import type { PolishBaseColor, PolishToneFamily } from '@/types/database.types';
+import type { PolishBaseColor, PolishToneFamily } from '@/types/models';
 
 export interface PolishLabel {
   id: string;

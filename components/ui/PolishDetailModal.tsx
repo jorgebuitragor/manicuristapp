@@ -127,7 +127,7 @@ export function PolishDetailModal({ polishId, onClose }: PolishDetailModalProps)
       onRequestClose={handleClose}
       supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
     >
-      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity, backgroundColor: colors.backdrop }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
       </Animated.View>
 
@@ -135,6 +135,7 @@ export function PolishDetailModal({ polishId, onClose }: PolishDetailModalProps)
         <Animated.View
           style={[
             styles.card,
+            { shadowColor: colors.shadow },
             { backgroundColor: colors.card, borderColor: colors.border },
             { transform: [{ scale }], opacity: backdropOpacity },
           ]}
@@ -252,7 +253,6 @@ export function PolishDetailModal({ polishId, onClose }: PolishDetailModalProps)
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   centeredWrapper: {
     ...StyleSheet.absoluteFillObject,
@@ -267,7 +267,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
     shadowRadius: 24,

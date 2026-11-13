@@ -21,18 +21,16 @@ La **organización** es la raíz de todos los datos. Un usuario de Supabase Auth
 | `organization_members` | `organization_id, user_id, role` | PK compuesta; `role ∈ {'owner','member'}` |
 | `professionals` | `id, name, color, user_id, organization_id` | `color` HEX para el calendario (default `#c084fc`) |
 
-> [!warning] `CLAUDE.md` raíz lista `professionals.email`, pero esa columna no existe en la migración ni en los tipos. Ver [[discrepancias]].
-
 ## Ciclo de vida
 
 1. Registro email/password (o Google) → sin organización.
 2. `AuthGuard` (`app/_layout.tsx`) detecta `session && !organizationId` → redirige a `/onboarding`.
 3. Onboarding en 2 pasos: tipo (Home Studio / Salón) → nombre del estudio + nombre propio.
-4. `rpc('create_organization', { org_name, org_type })` crea org + membresía `owner` de forma atómica (SECURITY DEFINER) y devuelve el `id`.
+4. `rpc('create_organization', { org_name, org_type, org_lang })` crea org + membresía `owner` de forma atómica (SECURITY DEFINER) y devuelve el `id`. Valida tipo y nombre y crea los [[servicio|servicios por defecto]] en el idioma indicado (`org_lang`). Si el usuario ya tiene org devuelve esa sin crear nada (un reintento del onboarding no duplica ni bloquea). Es la **única** vía de alta: no hay políticas INSERT en `organizations` ni `organization_members`.
 5. Insert en `professionals` con `user_id` y `organization_id`.
 6. `useOrganization().refetch()` → `AuthGuard` redirige a `/(tabs)`.
 
-> [!warning] La función `create_organization` **no está definida** en `supabase/migration.sql`; existe solo en la BD remota. Ver [[discrepancias]].
+> [!note] Hasta `47f7412` la función solo existía en la BD remota; ahora está versionada en `supabase/migration.sql`. Ver [[discrepancias]].
 
 ## En el cliente
 
