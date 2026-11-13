@@ -26,8 +26,6 @@ Persona atendida por la organización. Es compartida por toda la [[organizacion]
 | `birthday` | date `YYYY-MM-DD` | Dispara notificación de cumpleaños → [[notificaciones]] |
 | `organization_id` | uuid | [[multi-tenancy]] |
 
-> [!warning] `birthday` existe en los tipos y se usa en el código, pero no está en `supabase/migration.sql`. Ver [[discrepancias]].
-
 Borrar un cliente **borra en cascada sus citas** (`appointments.client_id ON DELETE CASCADE`).
 
 ## Hooks (`hooks/useClients.ts`)

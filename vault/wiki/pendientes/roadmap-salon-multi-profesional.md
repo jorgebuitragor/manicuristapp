@@ -29,15 +29,15 @@ Owner crea el salón
 | RPC `join_organization(code)` | Valida el código e inserta en `organization_members` (SECURITY DEFINER) |
 | Onboarding paso 1 | Tercera opción "Unirme a un salón existente" |
 | Ajustes → "Invitar profesional" | Solo para owners de salón; genera y comparte el código |
-| RLS `org_invites` | El owner crea y ve; cualquier autenticado puede validar |
+| RLS `org_invites` | El owner crea y ve; la validación del código se hace dentro de la RPC (sin SELECT general) |
 
 ## Consideraciones detectadas en el vault
 
 Cosas a resolver junto con esta funcionalidad (vienen de otras páginas):
 
-1. **Cerrar `member_self_insert`**: hoy cualquiera puede insertarse en una org conociendo su id. El join solo debería ser posible vía `join_organization`. → [[multi-tenancy]]
-2. **RLS de `org_invites`**: "cualquier autenticado puede leer" expone todos los códigos; mejor validar solo dentro de la RPC y no dar SELECT.
-3. **`create_organization` y `join_organization` versionadas en la migración** → [[discrepancias]].
+1. ~~**Cerrar `member_self_insert`**~~ — hecho en `47f7412`: no hay política INSERT en `organization_members`, así que `join_organization` **tiene** que ser SECURITY DEFINER. → [[multi-tenancy]]
+2. **RLS de `org_invites`**: el diseño original daba SELECT a cualquier autenticado, lo que expone todos los códigos. Ya corregido en `CLAUDE.md`: validar solo dentro de la RPC.
+3. `create_organization` ya está versionada (`47f7412`); `join_organization` debe ir en una sección nueva de `migration.sql`. → [[esquema-bd]]
 4. **Profesional en la cita**: `appointments.professional_id` existe pero no se asigna al crear. Hace falta para filtrar "mis citas" y para colorear por profesional. → [[organizacion]], [[cita]]
 5. **Google Calendar por profesional**: los tokens son por dispositivo, pero `google_event_id` es de la cita. → [[google-calendar]]
 6. **Notificaciones locales**: el recordatorio solo se programa en el dispositivo que crea la cita. → [[notificaciones]]

@@ -28,7 +28,6 @@ Síntesis de `TECH_DEBT.md` más lo encontrado al crear el vault. `TECH_DEBT.md`
   - `app/appointments/[id].tsx` ~294/300 — update de `design_photo_url`.
   - `app/(tabs)/calendar.tsx` — canal realtime (aceptable, pero podría ser un hook `useAppointmentsRealtime`).
   - `app/(tabs)/settings.tsx` — `getUser`, `signOut`.
-  - `components/ui/PhotoPickerField.tsx` — upload/remove en storage.
   - `hooks/useGoogleCalendar.ts` escribe `google_event_id` fuera de una mutación (no invalida cache).
 - **Textos sin i18n**: etiquetas de gráfico en `hooks/useIncomes.ts`; textos de `lib/notifications.ts`. → [[i18n]]
 - **Colores HEX literales**: ~34 líneas en `app/` + `components/` (revisar cuáles son paletas legítimas). → [[ui-y-tema]]
@@ -39,6 +38,12 @@ Síntesis de `TECH_DEBT.md` más lo encontrado al crear el vault. `TECH_DEBT.md`
 - `useCreateAppointment` inserta la cita y luego los servicios en dos llamadas; si falla la segunda, queda la cita sin servicios.
 - `useSearchAppointments` busca solo entre las **100 citas más recientes** y filtra en el cliente.
 - `useIncomeStats` / `useIncomeSummary` agregan en el cliente y calculan fechas en UTC. → [[ingreso]]
+- Fotos huérfanas en storage (`tempId`, cambio de foto, rutas anteriores a la carpeta por org). → [[fotos-y-storage]]
+
+### Resuelto
+
+- ~~`PhotoPickerField` llamaba a `supabase.storage` directamente~~ → `hooks/usePhotoStorage.ts`. *`47f7412`*
+- ~~`SwatchSection` usaba `movePolish` sin recibirlo (ReferenceError en el modo mover)~~. *`47f7412`*
 
 ### Mantenibilidad
 

@@ -36,7 +36,7 @@ Toda pieza de UI reutilizable vive en `components/ui/` con sus propios estilos. 
 | Calendario | `CalendarNotesPad` (notas + dibujo por día) |
 | Infraestructura | `Toast`, `OfflineBanner`, `SplashAnimation`, `SwipeToDismissModal`, `TabletQuickActionFab` |
 
-> [!note] `CLAUDE.md` raíz solo lista 10 componentes; el catálogo real tiene ~27. Esta tabla es la referencia actualizada.
+> [!note] Desde `47f7412` `CLAUDE.md` raíz lista todo el catálogo.
 
 > [!warning] Hay ~34 líneas con colores HEX literales en `app/` y `components/` (algunas son paletas legítimas del selector de color). Ver [[deuda-tecnica]].
 

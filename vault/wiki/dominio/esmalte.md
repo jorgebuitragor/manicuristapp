@@ -40,8 +40,7 @@ Cada frasco de esmalte de la organización, con su color, marca, ubicación fís
   - Base: `red, orange, yellow, green, mint, turquoise, blue, navy, purple, pink, brown, gray`
   - Tono: `classic, pastel, neon, nude, deep`
 - `labelToKey(label)` genera la clave a partir del texto.
-
-> [!warning] `polish_base_colors` y `polish_tone_families` tienen `UNIQUE (key)` **global**, no por organización. Dos orgs no podrían crear la misma etiqueta personalizada. Ver [[discrepancias]].
+- La `key` es única **por organización** (`uq_base_color_key_org`, `uq_tone_family_key_org`). Hasta `47f7412` era única global y una segunda org no podía repetir una etiqueta, ni siquiera sobrescribir el texto de una integrada.
 
 ## Marcas
 
@@ -61,7 +60,7 @@ Tabla `nail_polish_brands (name, organization_id)`, único por `(name, organizat
 - Vistas: `grid`, `list`, `swatch`.
 - Filtros: marca, esmaltero, stock (todos / con / sin), color base, familia de tono.
 - Orden: `recent, color, brand, code, position` + asc/desc.
-- Modo mover: mapa de posiciones del esmaltero para recolocar esmaltes.
+- Modo mover: mapa de posiciones del esmaltero para recolocar esmaltes. (Hasta `47f7412` fallaba con un `ReferenceError`: `SwatchSection` no desestructuraba la prop `movePolish`.)
 - `PolishEffectOverlay` dibuja el efecto (glitter, cat eye…) sobre el swatch.
 - Alta/edición en `PolishFormModal`; detalle en `app/polishes/[id].tsx` / `PolishDetailModal`.
 

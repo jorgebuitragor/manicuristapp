@@ -9,7 +9,11 @@ fuentes:
 
 # Esquema de base de datos
 
-Postgres en Supabase. El archivo `supabase/migration.sql` es **un único script acumulativo e idempotente** (`IF NOT EXISTS`, bloques `DO $$`) que se ejecuta a mano en el SQL Editor; no hay carpeta de migraciones versionadas ni CLI de Supabase en el repo.
+Postgres en Supabase. El archivo `supabase/migration.sql` es **un único script acumulativo** que se ejecuta a mano en el SQL Editor; no hay carpeta de migraciones versionadas ni CLI de Supabase en el repo.
+
+**Regla para cambios de esquema:** añadir al final una sección nueva, con fecha e idempotente (`IF NOT EXISTS`, `DROP … IF EXISTS` antes de `CREATE POLICY`), y ejecutar solo esa sección. Las secciones antiguas no se pueden re-ejecutar enteras (`CREATE POLICY` sin guarda). Nunca crear objetos solo desde el dashboard.
+
+**Cómo probar una migración en local:** hay un Postgres 16 disponible en el contenedor. El 2026-11-13 se probó así: cluster temporal con `initdb`, simulaciones mínimas de `auth` (`auth.users`, `auth.uid()` leyendo `request.jwt.claim.sub`) y `storage` (`buckets`, `objects` con RLS, `foldername()`), roles `anon`/`authenticated`, y después `SET ROLE authenticated` + `set_config('request.jwt.claim.sub', …)` para comprobar las políticas como cada usuario.
 
 Los tipos viven en `types/database.types.ts` (exporta `Tables<>`, `TablesInsert<>`, `TablesUpdate<>` y alias como `Client`, `AppointmentWithRelations`).
 
@@ -39,7 +43,7 @@ Todas las de datos tienen `organization_id → organizations ON DELETE CASCADE` 
 | Función | Definida en migración | Uso |
 | --- | --- | --- |
 | `get_my_org_id()` | Sí | Políticas RLS |
-| `create_organization(org_name, org_type)` | **No** | Onboarding (`app/onboarding.tsx`) |
+| `create_organization(org_name, org_type)` | Sí (desde `47f7412`) | Onboarding (`app/onboarding.tsx`); única vía para crear org + membresía |
 
 ## Storage (buckets públicos)
 
@@ -55,7 +59,7 @@ Todas las de datos tienen `organization_id → organizations ON DELETE CASCADE` 
 npx supabase gen types typescript --project-id <id> > types/database.types.ts
 ```
 
-> [!warning] `database.types.ts` parece editado a mano (comentarios inline como `// 'YYYY-MM-DD'`, alias y `Functions: Record<string, never>` pese a usarse una RPC). Regenerarlo sobrescribiría los alias del final. Ver [[discrepancias]].
+> [!warning] `database.types.ts` mezcla código generado con alias escritos a mano al final (`Client`, `AppointmentWithRelations`…); regenerarlo los borra. `Functions` ya declara las dos RPC. Ver [[discrepancias]].
 
 ## Relacionado
 

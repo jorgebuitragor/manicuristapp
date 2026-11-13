@@ -33,8 +33,6 @@ Tablas puente:
 - `appointment_services (appointment_id, service_id)` — fuente real de los servicios (muchos-a-muchos).
 - `appointment_polishes (appointment_id, nail_polish_id)` — esmaltes usados.
 
-> [!warning] `google_event_id` no está en `supabase/migration.sql`. Ver [[discrepancias]].
-
 ## Máquina de estados (`lib/appointmentStateMachine.ts`)
 
 ```text
