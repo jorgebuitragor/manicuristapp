@@ -553,3 +553,153 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_brand_name_org
 CREATE UNIQUE INDEX IF NOT EXISTS uq_rack_name_org
   ON nail_racks (name, organization_id)
   WHERE organization_id IS NOT NULL;
+
+-- ============================================================
+-- 2026-11-13 — FIX: esquema completo, etiquetas por org y seguridad
+-- ------------------------------------------------------------
+-- Idempotente: se puede ejecutar entera varias veces.
+-- En una BD existente basta con ejecutar SOLO esta sección.
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 1. Columnas que existían en la BD remota pero no en este script
+-- ------------------------------------------------------------
+
+ALTER TABLE clients      ADD COLUMN IF NOT EXISTS birthday        DATE;  -- 'YYYY-MM-DD'
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS google_event_id TEXT;  -- evento de Google Calendar
+
+-- ------------------------------------------------------------
+-- 2. Funciones de organización
+-- ------------------------------------------------------------
+
+-- search_path fijo: buena práctica obligatoria en funciones SECURITY DEFINER
+CREATE OR REPLACE FUNCTION get_my_org_id()
+RETURNS UUID AS $$
+  SELECT organization_id
+  FROM public.organization_members
+  WHERE user_id = auth.uid()
+  LIMIT 1
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
+-- Crea organización + membresía 'owner' de forma atómica (usada en onboarding).
+-- Si el usuario ya tiene organización devuelve la existente, así un reintento
+-- del onboarding (p.ej. tras fallar el insert del profesional) no se bloquea
+-- ni crea organizaciones duplicadas.
+DROP FUNCTION IF EXISTS create_organization(TEXT, TEXT);
+CREATE FUNCTION create_organization(org_name TEXT, org_type TEXT)
+RETURNS UUID AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_org_id  UUID;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated' USING ERRCODE = '42501';
+  END IF;
+  IF org_type IS NULL OR org_type NOT IN ('home_studio', 'salon') THEN
+    RAISE EXCEPTION 'Invalid organization type: %', org_type USING ERRCODE = '22023';
+  END IF;
+  IF coalesce(btrim(org_name), '') = '' THEN
+    RAISE EXCEPTION 'Organization name is required' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT organization_id INTO v_org_id
+  FROM organization_members
+  WHERE user_id = v_user_id
+  LIMIT 1;
+  IF v_org_id IS NOT NULL THEN
+    RETURN v_org_id;
+  END IF;
+
+  INSERT INTO organizations (name, type, owner_id)
+  VALUES (btrim(org_name), org_type, v_user_id)
+  RETURNING id INTO v_org_id;
+
+  INSERT INTO organization_members (organization_id, user_id, role)
+  VALUES (v_org_id, v_user_id, 'owner');
+
+  RETURN v_org_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION create_organization(TEXT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION create_organization(TEXT, TEXT) TO authenticated;
+
+-- ------------------------------------------------------------
+-- 3. Etiquetas de esmalte: clave única POR organización
+--    (antes UNIQUE(key) global: una 2ª org no podía repetir una etiqueta)
+-- ------------------------------------------------------------
+
+ALTER TABLE polish_base_colors   DROP CONSTRAINT IF EXISTS polish_base_colors_key_key;
+ALTER TABLE polish_tone_families DROP CONSTRAINT IF EXISTS polish_tone_families_key_key;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_base_color_key_org
+  ON polish_base_colors (organization_id, key)
+  WHERE organization_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tone_family_key_org
+  ON polish_tone_families (organization_id, key)
+  WHERE organization_id IS NOT NULL;
+
+-- ------------------------------------------------------------
+-- 4. Membresías: nadie puede insertarse a sí mismo en una org ajena.
+--    Las altas pasan solo por funciones SECURITY DEFINER
+--    (create_organization; en el futuro join_organization).
+-- ------------------------------------------------------------
+
+DROP POLICY IF EXISTS "member_self_insert" ON organization_members;
+DROP POLICY IF EXISTS "org_owner_insert"   ON organizations;
+
+-- ------------------------------------------------------------
+-- 5. Storage aislado por organización
+--    Ruta obligatoria: <organization_id>/<carpeta>/<archivo>
+--    p.ej. design-photos/3f2a…/designs/<appointment_id>.webp
+--    Los buckets siguen siendo públicos: las URLs públicas ya guardadas
+--    siguen funcionando. Las fotos antiguas (sin carpeta de org) se pueden
+--    seguir viendo pero la app ya no puede sobrescribirlas ni borrarlas.
+-- ------------------------------------------------------------
+
+DROP POLICY IF EXISTS "auth_upload_design"  ON storage.objects;
+DROP POLICY IF EXISTS "auth_update_design"  ON storage.objects;
+DROP POLICY IF EXISTS "public_read_design"  ON storage.objects;
+DROP POLICY IF EXISTS "auth_upload_polish"  ON storage.objects;
+DROP POLICY IF EXISTS "public_read_polish"  ON storage.objects;
+DROP POLICY IF EXISTS "auth_upload_service" ON storage.objects;
+DROP POLICY IF EXISTS "auth_update_service" ON storage.objects;
+DROP POLICY IF EXISTS "public_read_service" ON storage.objects;
+
+DROP POLICY IF EXISTS "org_photos_select" ON storage.objects;
+DROP POLICY IF EXISTS "org_photos_insert" ON storage.objects;
+DROP POLICY IF EXISTS "org_photos_update" ON storage.objects;
+DROP POLICY IF EXISTS "org_photos_delete" ON storage.objects;
+
+CREATE POLICY "org_photos_select" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id IN ('design-photos', 'polish-photos', 'service-photos')
+    AND (storage.foldername(name))[1] = public.get_my_org_id()::text
+  );
+
+CREATE POLICY "org_photos_insert" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id IN ('design-photos', 'polish-photos', 'service-photos')
+    AND (storage.foldername(name))[1] = public.get_my_org_id()::text
+  );
+
+CREATE POLICY "org_photos_update" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (
+    bucket_id IN ('design-photos', 'polish-photos', 'service-photos')
+    AND (storage.foldername(name))[1] = public.get_my_org_id()::text
+  )
+  WITH CHECK (
+    bucket_id IN ('design-photos', 'polish-photos', 'service-photos')
+    AND (storage.foldername(name))[1] = public.get_my_org_id()::text
+  );
+
+CREATE POLICY "org_photos_delete" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id IN ('design-photos', 'polish-photos', 'service-photos')
+    AND (storage.foldername(name))[1] = public.get_my_org_id()::text
+  );

@@ -245,6 +245,7 @@ function SwatchSection({
   onSelectForMove,
   onClearMove,
   onLongPressEmptySlot,
+  movePolish,
 }: {
   rackName: string;
   rackId: string | null;

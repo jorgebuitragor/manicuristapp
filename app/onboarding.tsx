@@ -55,7 +55,7 @@ export default function OnboardingScreen() {
       if (!user) throw new Error('No user');
 
       // 1. Crear organización + membresía via función SECURITY DEFINER
-      const { data: orgId, error: rpcError } = await (supabase as any)
+      const { data: orgId, error: rpcError } = await supabase
         .rpc('create_organization', {
           org_name: studioName.trim(),
           org_type: orgType!,
