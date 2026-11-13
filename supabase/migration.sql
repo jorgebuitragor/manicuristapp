@@ -573,6 +573,11 @@ RETURNS UUID AS $$
   LIMIT 1
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
+-- Sin sesión no tiene sentido llamarla (el asesor de Supabase lo marca).
+-- authenticated la necesita: la evalúan todas las políticas RLS.
+REVOKE ALL ON FUNCTION get_my_org_id() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION get_my_org_id() TO authenticated;
+
 -- Servicios con los que arranca cada organización nueva, en el idioma de la
 -- app ('es' | 'en'). Sin precio: depende de la moneda y del negocio.
 -- Interna: solo la llama create_organization (no ejecutable desde la API).

@@ -42,6 +42,7 @@ Cada organización nueva arranca con 8 servicios, que crea `seed_default_service
 - **Sin precio** (`NULL`): el seed original tenía precios en euros, que no sirven con COP, MXN, etc. La usuaria los pone en Ajustes → Servicios.
 - Se crean una sola vez: un reintento del onboarding no los duplica.
 - Las orgs creadas **antes** de este cambio no reciben servicios automáticamente.
+- En producción, "Estudio jorge" tiene 6 servicios que vienen del seed antiguo (asignados el 2026-11-13) **con los precios en euros** de aquel seed.
 
 > [!note] Hasta 2026-11-13 el seed era un `INSERT` sin `organization_id` (anterior al multi-tenant): 8 filas invisibles bajo RLS, y las orgs nuevas arrancaban sin servicios. La migración las borra salvo que alguna cita las use.
 

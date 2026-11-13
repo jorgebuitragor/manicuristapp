@@ -45,3 +45,14 @@ grep "^## \[.*sync" vault/wiki/log.md | tail -1  # último sync de código
 - Se modificó la sección `2026-11-13 — FIX` en lugar de añadir otra, porque aún no se había aplicado en Supabase.
 - Probado en Postgres local: BD existente (7 de 8 filas huérfanas borradas, la usada por una cita se conserva) y BD nueva; idempotente; 7 comprobaciones de servicios (idioma, sin duplicados en reintentos, aislamiento, sin acceso a la función interna) + las 19 de seguridad sobre una BD limpia. `tsc --noEmit` sin errores.
 - Páginas tocadas: [[servicio]], [[organizacion]], [[esquema-bd]], [[discrepancias]].
+
+## [2026-11-13] ingest | Estado real de Supabase vía conector + correcciones de datos
+
+- Primera conexión al proyecto `manicuristapp` (`nkispboetijemfpfahbl`) con el conector de Supabase. Lectura completa: esquema, funciones, políticas, constraints, storage, conteos por org y asesor de seguridad. Detalle en [[discrepancias]].
+- Cambios de **datos** aplicados en producción a petición del usuario (un bloque `DO` atómico con conteos esperados):
+  - Datos sin `organization_id` (24 filas, anteriores al multi-tenant) → asignados a "Estudio jorge".
+  - 2 organizaciones "Prueba" duplicadas y vacías (bug de reintentos del onboarding) → borradas.
+  - Verificado después: 0 filas sin org, 0 usuarios en varias orgs, 0 membresías huérfanas.
+- `migration.sql`: la sección FIX ahora también revoca `get_my_org_id` a `anon` (aviso del asesor). Re-probado en local: idempotente, 19/19 comprobaciones de RLS.
+- **La sección FIX sigue sin aplicarse en Supabase**: espera a que se publique la app.
+- Páginas tocadas: [[discrepancias]], [[fotos-y-storage]], [[servicio]].

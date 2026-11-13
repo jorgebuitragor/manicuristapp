@@ -37,7 +37,7 @@ fuentes:
 
 ## Fotos antiguas (antes de `47f7412`)
 
-Las fotos subidas antes del cambio están en rutas sin carpeta de org (`designs/<id>.webp`). Se siguen **viendo** (bucket público), pero la app ya no puede sobrescribirlas ni borrarlas: al cambiar o quitar una se sube la nueva a la ruta con org y la antigua queda huérfana en el bucket.
+Las fotos subidas antes del cambio (en producción, **las 108** a 2026-11-13: 104 de esmaltes, 3 de diseños, 1 de servicio) están en rutas sin carpeta de org (`designs/<id>.webp`). Se siguen **viendo** (bucket público), pero la app ya no puede sobrescribirlas ni borrarlas: al cambiar o quitar una se sube la nueva a la ruta con org y la antigua queda huérfana en el bucket.
 
 > [!question] ¿Migrar las fotos antiguas a la carpeta de su org (con un script contra la API de Storage) o limpiar los huérfanos a mano?
 
