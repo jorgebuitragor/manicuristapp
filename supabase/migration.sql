@@ -30,17 +30,9 @@ CREATE TABLE IF NOT EXISTS services (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Seed de servicios base
-INSERT INTO services (name, duration, price) VALUES
-  ('Manicura básica',            30, 15.00),
-  ('Semipermanente manos',       60, 25.00),
-  ('Semipermanente pies',        60, 25.00),
-  ('Nail Art (diseño simple)',   75, 35.00),
-  ('Nail Art (diseño complejo)', 90, 50.00),
-  ('Pedicura básica',            45, 20.00),
-  ('Retirada esmalte',           20, 10.00),
-  ('Reconstrucción acrílico',   120, 60.00)
-ON CONFLICT DO NOTHING;
+-- Los servicios por defecto ya no se siembran aquí (quedaban sin organización
+-- e invisibles bajo RLS): los crea seed_default_services() al crear cada
+-- organización. Ver sección "2026-11-13 — FIX" al final.
 
 -- 4. ESMALTES
 CREATE TABLE IF NOT EXISTS nail_polish_brands (
@@ -581,12 +573,39 @@ RETURNS UUID AS $$
   LIMIT 1
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
--- Crea organización + membresía 'owner' de forma atómica (usada en onboarding).
+-- Servicios con los que arranca cada organización nueva, en el idioma de la
+-- app ('es' | 'en'). Sin precio: depende de la moneda y del negocio.
+-- Interna: solo la llama create_organization (no ejecutable desde la API).
+CREATE OR REPLACE FUNCTION seed_default_services(p_org_id UUID, p_lang TEXT DEFAULT 'es')
+RETURNS VOID AS $$
+  INSERT INTO services (organization_id, name, duration, price)
+  SELECT p_org_id,
+         CASE WHEN p_lang = 'en' THEN d.name_en ELSE d.name_es END,
+         d.duration,
+         NULL
+  FROM (VALUES
+    (1, 'Manicura básica',            'Basic manicure',             30),
+    (2, 'Semipermanente manos',       'Gel polish – hands',         60),
+    (3, 'Semipermanente pies',        'Gel polish – feet',          60),
+    (4, 'Nail Art (diseño simple)',   'Nail art (simple design)',   75),
+    (5, 'Nail Art (diseño complejo)', 'Nail art (complex design)',  90),
+    (6, 'Pedicura básica',            'Basic pedicure',             45),
+    (7, 'Retirada de esmalte',        'Polish removal',             20),
+    (8, 'Reconstrucción acrílico',    'Acrylic rebuild',           120)
+  ) AS d(ord, name_es, name_en, duration)
+  ORDER BY d.ord;
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION seed_default_services(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+
+-- Crea organización + membresía 'owner' + servicios por defecto de forma
+-- atómica (usada en onboarding).
 -- Si el usuario ya tiene organización devuelve la existente, así un reintento
 -- del onboarding (p.ej. tras fallar el insert del profesional) no se bloquea
--- ni crea organizaciones duplicadas.
+-- ni crea organizaciones (ni servicios) duplicados.
 DROP FUNCTION IF EXISTS create_organization(TEXT, TEXT);
-CREATE FUNCTION create_organization(org_name TEXT, org_type TEXT)
+DROP FUNCTION IF EXISTS create_organization(TEXT, TEXT, TEXT);
+CREATE FUNCTION create_organization(org_name TEXT, org_type TEXT, org_lang TEXT DEFAULT 'es')
 RETURNS UUID AS $$
 DECLARE
   v_user_id UUID := auth.uid();
@@ -617,12 +636,14 @@ BEGIN
   INSERT INTO organization_members (organization_id, user_id, role)
   VALUES (v_org_id, v_user_id, 'owner');
 
+  PERFORM seed_default_services(v_org_id, org_lang);
+
   RETURN v_org_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
-REVOKE ALL ON FUNCTION create_organization(TEXT, TEXT) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION create_organization(TEXT, TEXT) TO authenticated;
+REVOKE ALL ON FUNCTION create_organization(TEXT, TEXT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION create_organization(TEXT, TEXT, TEXT) TO authenticated;
 
 -- ------------------------------------------------------------
 -- 3. Etiquetas de esmalte: clave única POR organización
@@ -703,3 +724,20 @@ CREATE POLICY "org_photos_delete" ON storage.objects
     bucket_id IN ('design-photos', 'polish-photos', 'service-photos')
     AND (storage.foldername(name))[1] = public.get_my_org_id()::text
   );
+
+-- ------------------------------------------------------------
+-- 6. Limpieza del seed antiguo de servicios
+--    El INSERT original (sin organization_id) dejó 8 filas que nadie ve
+--    bajo RLS. Se borran solo si ninguna cita las usa, por si hubiera
+--    datos anteriores al multi-tenant pendientes de asignar a una org.
+-- ------------------------------------------------------------
+
+DELETE FROM services s
+WHERE s.organization_id IS NULL
+  AND s.name IN (
+    'Manicura básica', 'Semipermanente manos', 'Semipermanente pies',
+    'Nail Art (diseño simple)', 'Nail Art (diseño complejo)',
+    'Pedicura básica', 'Retirada esmalte', 'Reconstrucción acrílico'
+  )
+  AND NOT EXISTS (SELECT 1 FROM appointment_services x WHERE x.service_id = s.id)
+  AND NOT EXISTS (SELECT 1 FROM appointments a WHERE a.service_id = s.id);

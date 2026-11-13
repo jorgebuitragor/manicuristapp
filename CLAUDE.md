@@ -196,7 +196,7 @@ danger · dangerMuted · dangerBorder
 
 Todas las tablas de datos tienen además `organization_id` (ver Multi-tenancy).
 
-Funciones RPC: `get_my_org_id()`, `create_organization(org_name, org_type)`.
+Funciones RPC: `get_my_org_id()`, `create_organization(org_name, org_type, org_lang = 'es')`. Interna (no expuesta a la API): `seed_default_services(org_id, lang)`.
 
 Storage (buckets públicos `design-photos`, `polish-photos`, `service-photos`): las rutas **deben** empezar por `<organization_id>/` — las políticas rechazan cualquier otra. Usar siempre `usePhotoStorage`.
 
@@ -238,7 +238,7 @@ La app es multi-tenant desde la raíz. Cada dato pertenece a una `organization`.
 1. Usuario se registra (email + password)
 2. Sin organización → AuthGuard redirige a `/onboarding`
 3. Onboarding: elige tipo (Home Studio / Salón) + nombre del estudio + su nombre
-4. Se llama la función RPC `create_organization(org_name, org_type)` (SECURITY DEFINER) que crea `organizations` + `organization_members` atómicamente. Es la **única** vía de alta: no hay políticas INSERT en esas tablas. Si el usuario ya tiene org, devuelve la existente (reintento seguro)
+4. Se llama la función RPC `create_organization(org_name, org_type)` (SECURITY DEFINER) que crea `organizations` + `organization_members` atómicamente. Es la **única** vía de alta: no hay políticas INSERT en esas tablas. También crea los 8 servicios por defecto (en el idioma de la app, sin precio). Si el usuario ya tiene org, devuelve la existente sin crear nada (reintento seguro)
 5. Se crea el perfil en `professionals` ligado al usuario y la org
 6. `OrganizationContext.refetch()` → AuthGuard redirige a `/(tabs)`
 

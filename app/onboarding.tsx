@@ -21,7 +21,7 @@ type Step = 1 | 2;
 
 export default function OnboardingScreen() {
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { refetch } = useOrganization();
   const { showError } = useError();
 
@@ -59,6 +59,7 @@ export default function OnboardingScreen() {
         .rpc('create_organization', {
           org_name: studioName.trim(),
           org_type: orgType!,
+          org_lang: lang, // nombres de los servicios por defecto
         });
       if (rpcError) throw rpcError;
 

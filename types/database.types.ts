@@ -495,7 +495,7 @@ export interface Database {
     Views: Record<string, never>;
     Functions: {
       create_organization: {
-        Args: { org_name: string; org_type: string };
+        Args: { org_name: string; org_type: string; org_lang?: string };
         Returns: string;
       };
       get_my_org_id: {

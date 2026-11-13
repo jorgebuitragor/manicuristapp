@@ -30,7 +30,7 @@ Contradicciones verificables. Cuando se resuelva una, marcarla `[x]` con fecha y
 - [x] **`UNIQUE(key)` global en `polish_base_colors` / `polish_tone_families`** → ahora único por `(organization_id, key)`. *`47f7412`* → [[esmalte]]
 - [x] **Políticas de storage sin org** → carpeta `<organization_id>/` obligatoria para leer, subir, actualizar y borrar. *`47f7412`* → [[fotos-y-storage]]
 - [x] **`member_self_insert` permitía unirse a cualquier org** → eliminada (también `org_owner_insert`); las altas solo pasan por RPC. *`47f7412`* → [[multi-tenancy]]
-- [ ] **Seed de `services` sin `organization_id`** — filas invisibles bajo RLS; las orgs nuevas arrancan sin servicios. Decidir: borrar el seed o sembrar servicios por defecto dentro de `create_organization`. → [[servicio]]
+- [x] **Seed de `services` sin `organization_id`** → `create_organization` siembra 8 servicios por org (según idioma, sin precio) y la migración borra las filas huérfanas que no usa ninguna cita. *2026-11-13* → [[servicio]]
 
 ## Tipos
 

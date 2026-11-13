@@ -6,6 +6,7 @@ fuentes:
   - hooks/useServices.ts
   - app/settings/services.tsx
   - supabase/migration.sql
+  - app/onboarding.tsx
 ---
 
 # Servicio
@@ -22,9 +23,27 @@ Catálogo de trabajos que ofrece la organización (manicura, semipermanente, nai
 | `photo_url` | bucket `service-photos` → [[fotos-y-storage]] |
 | `organization_id` | [[multi-tenancy]] |
 
-> [!warning] `CLAUDE.md` raíz llama a la columna `default_duration_min`; el nombre real es `duration`. Ver [[discrepancias]].
+## Servicios por defecto
 
-> [!question] La migración incluye un *seed* de 8 servicios **sin** `organization_id` (anterior al multi-tenant). Con RLS por org esas filas no son visibles para nadie. ¿Las nuevas orgs arrancan sin servicios?
+Cada organización nueva arranca con 8 servicios, que crea `seed_default_services(org_id, lang)` dentro de `create_organization` (en la misma transacción):
+
+| Español | Inglés | Min |
+| --- | --- | --- |
+| Manicura básica | Basic manicure | 30 |
+| Semipermanente manos | Gel polish – hands | 60 |
+| Semipermanente pies | Gel polish – feet | 60 |
+| Nail Art (diseño simple) | Nail art (simple design) | 75 |
+| Nail Art (diseño complejo) | Nail art (complex design) | 90 |
+| Pedicura básica | Basic pedicure | 45 |
+| Retirada de esmalte | Polish removal | 20 |
+| Reconstrucción acrílico | Acrylic rebuild | 120 |
+
+- **Idioma**: el onboarding pasa `org_lang` con el idioma activo de la app (`es` por defecto).
+- **Sin precio** (`NULL`): el seed original tenía precios en euros, que no sirven con COP, MXN, etc. La usuaria los pone en Ajustes → Servicios.
+- Se crean una sola vez: un reintento del onboarding no los duplica.
+- Las orgs creadas **antes** de este cambio no reciben servicios automáticamente.
+
+> [!note] Hasta 2026-11-13 el seed era un `INSERT` sin `organization_id` (anterior al multi-tenant): 8 filas invisibles bajo RLS, y las orgs nuevas arrancaban sin servicios. La migración las borra salvo que alguna cita las use.
 
 ## Relación con citas
 

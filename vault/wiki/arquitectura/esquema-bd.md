@@ -43,7 +43,8 @@ Todas las de datos tienen `organization_id → organizations ON DELETE CASCADE` 
 | Función | Definida en migración | Uso |
 | --- | --- | --- |
 | `get_my_org_id()` | Sí | Políticas RLS |
-| `create_organization(org_name, org_type)` | Sí (desde `47f7412`) | Onboarding (`app/onboarding.tsx`); única vía para crear org + membresía |
+| `create_organization(org_name, org_type, org_lang = 'es')` | Sí | Onboarding (`app/onboarding.tsx`); única vía para crear org + membresía + servicios por defecto |
+| `seed_default_services(org_id, lang)` | Sí | Interna (sin permiso de ejecución para `anon`/`authenticated`); la llama `create_organization` |
 
 ## Storage (buckets públicos)
 

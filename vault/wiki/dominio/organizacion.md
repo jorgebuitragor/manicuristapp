@@ -26,7 +26,7 @@ La **organización** es la raíz de todos los datos. Un usuario de Supabase Auth
 1. Registro email/password (o Google) → sin organización.
 2. `AuthGuard` (`app/_layout.tsx`) detecta `session && !organizationId` → redirige a `/onboarding`.
 3. Onboarding en 2 pasos: tipo (Home Studio / Salón) → nombre del estudio + nombre propio.
-4. `rpc('create_organization', { org_name, org_type })` crea org + membresía `owner` de forma atómica (SECURITY DEFINER) y devuelve el `id`. Valida tipo y nombre; si el usuario ya tiene org devuelve esa (un reintento del onboarding no duplica ni bloquea). Es la **única** vía de alta: no hay políticas INSERT en `organizations` ni `organization_members`.
+4. `rpc('create_organization', { org_name, org_type, org_lang })` crea org + membresía `owner` de forma atómica (SECURITY DEFINER) y devuelve el `id`. Valida tipo y nombre y crea los [[servicio|servicios por defecto]] en el idioma indicado (`org_lang`). Si el usuario ya tiene org devuelve esa sin crear nada (un reintento del onboarding no duplica ni bloquea). Es la **única** vía de alta: no hay políticas INSERT en `organizations` ni `organization_members`.
 5. Insert en `professionals` con `user_id` y `organization_id`.
 6. `useOrganization().refetch()` → `AuthGuard` redirige a `/(tabs)`.
 
