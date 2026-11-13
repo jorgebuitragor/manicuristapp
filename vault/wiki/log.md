@@ -38,3 +38,10 @@ grep "^## \[.*sync" vault/wiki/log.md | tail -1  # último sync de código
 - `CLAUDE.md` raíz y `AGENTS.md` actualizados.
 - Páginas tocadas: [[discrepancias]], [[multi-tenancy]], [[fotos-y-storage]], [[esquema-bd]], [[organizacion]], [[cliente]], [[cita]], [[esmalte]], [[estado-servidor-y-offline]], [[ui-y-tema]], [[deuda-tecnica]], [[roadmap-salon-multi-profesional]].
 - **Pendiente fuera del repo:** ejecutar la sección SQL en Supabase, después de publicar la app.
+
+## [2026-11-13] sync | Servicios por defecto por organización (61ea96f)
+
+- Commit `61ea96f`. `create_organization` acepta `org_lang` y siembra 8 servicios (es/en, sin precio) mediante `seed_default_services` (interna). Se quitó el seed sin org del inicio de `migration.sql` y la sección FIX borra esas filas si ninguna cita las usa.
+- Se modificó la sección `2026-11-13 — FIX` en lugar de añadir otra, porque aún no se había aplicado en Supabase.
+- Probado en Postgres local: BD existente (7 de 8 filas huérfanas borradas, la usada por una cita se conserva) y BD nueva; idempotente; 7 comprobaciones de servicios (idioma, sin duplicados en reintentos, aislamiento, sin acceso a la función interna) + las 19 de seguridad sobre una BD limpia. `tsc --noEmit` sin errores.
+- Páginas tocadas: [[servicio]], [[organizacion]], [[esquema-bd]], [[discrepancias]].
