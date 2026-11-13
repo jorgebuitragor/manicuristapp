@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Obsidian (vault/) — config local de cada usuario
+vault/.obsidian/*
+!vault/.obsidian/app.json
