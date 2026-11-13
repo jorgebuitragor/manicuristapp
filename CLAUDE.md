@@ -243,3 +243,14 @@ Entra con SU propio correo y ve los datos compartidos del salón
 - Un usuario puede pertenecer a una sola org (LIMIT 1 en `get_my_org_id()`). Si en el futuro se necesita multi-org por usuario, se debe revisar esta función y el contexto.
 - Las citas y clientes en un salón son compartidos por toda la org. Si se necesita aislamiento por profesional dentro del salón (cada una ve solo sus citas), agregar `professional_id` como filtro opcional en los hooks.
 - El `professional_id` en `appointments` ya existe y apunta a `professionals.id`, que a su vez tiene `user_id`. Esto permite filtrar citas por profesional cuando sea necesario.
+
+---
+
+## Vault de conocimiento (`vault/`)
+
+Wiki del proyecto mantenido por el LLM (patrón *LLM Wiki*, se abre con Obsidian). Reglas completas en `vault/CLAUDE.md`.
+
+- **Antes de trabajar en un área**, lee `vault/wiki/index.md` y las páginas relevantes.
+- **Después de un cambio de código** que altere comportamiento, esquema o convenciones, haz un `sync` del vault (actualiza las páginas afectadas y añade una entrada en `vault/wiki/log.md`).
+- `vault/raw/` son fuentes del usuario: **nunca editarlas**.
+- Contradicciones conocidas entre código, docs y BD: `vault/wiki/pendientes/discrepancias.md`.
