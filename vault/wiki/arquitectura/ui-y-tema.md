@@ -34,7 +34,7 @@ Toda pieza de UI reutilizable vive en `components/ui/` con sus propios estilos. 
 | Esmaltes | `PolishFormModal`, `PolishDetailModal`, `PolishEffectOverlay` → [[esmalte]] |
 | Citas / ingresos | `IncomeConfirmModal` → [[ingreso]] |
 | Calendario | `CalendarNotesPad` (notas + dibujo por día) |
-| Infraestructura | `Toast`, `OfflineBanner`, `SplashAnimation`, `SwipeToDismissModal`, `TabletQuickActionFab` |
+| Infraestructura | `Toast`, `OfflineBanner`, `SplashAnimation`, `SwipeToDismissModal`, `TabletQuickActionFab`, `AppErrorBoundary` |
 
 > [!note] Desde `47f7412` `CLAUDE.md` raíz lista todo el catálogo.
 

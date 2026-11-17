@@ -22,7 +22,16 @@ pnpm start          # Expo dev server (scan QR with Expo Go)
 pnpm ios            # Run on iOS simulator
 pnpm android        # Run on Android emulator
 pnpm web            # Run in browser
+pnpm typecheck      # tsc --noEmit (incluye tests/)
+pnpm test           # Tests de lógica pura con el runner de Node (requiere Node ≥ 22.6)
 ```
+
+### Tests
+
+- Viven en `tests/*.test.ts` y usan `node:test` + `node:assert` (sin Jest). Importan con extensión: `import { x } from '../lib/dates.ts'`.
+- Solo cubren **lógica pura** de `lib/` (fechas, máquina de estados de citas, i18n, rutas de storage): nada que importe React Native o Supabase. Si una función que quieres probar está en un hook, sácala a `lib/`.
+- `tests/i18n.test.ts` exige que `es` y `en` tengan las mismas claves y los mismos `{placeholders}`: al añadir un texto, añádelo en ambos idiomas.
+- CI (`.github/workflows/ci.yml`) corre `typecheck` y `test` en cada PR, con TZ `America/Bogota` y `Europe/Madrid`.
 
 ## File structure
 
@@ -56,7 +65,8 @@ hooks/                # Hooks TanStack Query (useAppointments, useClients, usePo
                       # useIncomes, useServices, useNailRacks, usePolishBrands,
                       # usePolishLabels, useProfessionals, usePhotoStorage, useGoogleCalendar)
 lib/                  # supabase, auth, queryClient, networkConfig, theme, i18n, dates,
-                      # appointmentStateMachine, notifications, googleCalendar
+                      # storagePaths, appointmentStateMachine, notifications, googleCalendar
+tests/                # Tests de lógica pura (node:test)
 types/
   database.types.ts   # Tipos GENERADOS de Supabase — no editar a mano
   models.ts           # Tipos de dominio (Client, AppointmentWithRelations, OrgType…)
@@ -156,6 +166,7 @@ warning · success · backdrop · birthday · birthdayMuted
 | `IncomeConfirmModal` | Confirmar ingreso al completar una cita |
 | `CalendarNotesPad` | Notas y dibujo por día en el calendario |
 | `Toast` · `OfflineBanner` · `SplashAnimation` · `TabletQuickActionFab` | Infraestructura de UI |
+| `AppErrorBoundary` | Pantalla "Algo salió mal / Reintentar" ante errores de render (exportada como `ErrorBoundary` en `app/_layout.tsx`). Funciona sin providers |
 
 ### Lo que NO va en una pantalla
 

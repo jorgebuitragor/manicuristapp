@@ -67,3 +67,17 @@ grep "^## \[.*sync" vault/wiki/log.md | tail -1  # último sync de código
 - **Tema**: tokens `dangerStrong`, `warning`, `success`, `backdrop`, `birthday`, `birthdayMuted`; cumpleaños del calendario ya respeta el modo oscuro. Excepciones de colores literales documentadas.
 - `tsc --noEmit` sin errores. No probado en dispositivo.
 - Páginas tocadas: [[deuda-tecnica]], [[discrepancias]], [[esquema-bd]], [[estado-servidor-y-offline]], [[ui-y-tema]], [[ingreso]], [[notificaciones]], [[i18n]], [[google-calendar]], [[cliente]], [[navegacion-y-auth]].
+
+## [2026-11-17] sync | Tests de lógica pura y CI
+
+- Estado en Supabase verificado por conector: la sección FIX **sigue sin aplicar** y ninguna foto usa aún la ruta por organización → la app nueva no está publicada todavía.
+- Nuevos `tests/*.test.ts` (22 tests, `node:test`, sin dependencias nuevas) y workflow de CI (typecheck + tests con TZ Bogotá y Madrid).
+- `lib/storagePaths.ts`: funciones puras extraídas de `usePhotoStorage`.
+- Páginas tocadas: [[deuda-tecnica]], [[fotos-y-storage]].
+
+## [2026-11-17] ingest | Bug reportado: app en blanco al mantener presionado un color
+
+- Reporte del usuario: en la vista muestrario, long-press sobre un color → app en blanco y bloqueada.
+- Diagnóstico: el long-press activa el modo mover; en la versión publicada `SwatchSection` usaba `movePolish` sin desestructurarlo → `ReferenceError` en render → pantalla en blanco (sin ErrorBoundary). Ya corregido en `47f7412`, pendiente de publicar.
+- Prevención: `AppErrorBoundary` exportado como `ErrorBoundary` en el layout raíz. No probado en dispositivo.
+- Páginas tocadas: [[deuda-tecnica]], [[navegacion-y-auth]], [[ui-y-tema]].

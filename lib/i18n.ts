@@ -414,6 +414,10 @@ const es: Dict = {
   'incomes.stats.period.week': 'Esta semana',
   'incomes.stats.period.month': 'Este mes',
   'incomes.chart.weekPrefix': 'S',
+  // Pantalla de error (ErrorBoundary)
+  'errorBoundary.title': 'Algo salió mal',
+  'errorBoundary.message': 'Esta pantalla tuvo un error inesperado. Puedes intentarlo de nuevo.',
+  'errorBoundary.retry': 'Reintentar',
   // Notificaciones locales
   'notifications.reminder.title': '📅 Cita próxima',
   'notifications.reminder.body': 'En {minutes} min: {client}',
@@ -907,6 +911,10 @@ const en: Dict = {
   'incomes.stats.period.week': 'This week',
   'incomes.stats.period.month': 'This month',
   'incomes.chart.weekPrefix': 'W',
+  // Error screen (ErrorBoundary)
+  'errorBoundary.title': 'Something went wrong',
+  'errorBoundary.message': 'This screen hit an unexpected error. You can try again.',
+  'errorBoundary.retry': 'Try again',
   // Local notifications
   'notifications.reminder.title': '📅 Upcoming appointment',
   'notifications.reminder.body': 'In {minutes} min: {client}',

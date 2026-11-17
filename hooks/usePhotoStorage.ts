@@ -1,18 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { useOrganization } from '@/context/OrganizationContext';
+import { storagePathFromPublicUrl, orgStoragePath, type PhotoBucket } from '@/lib/storagePaths';
 
-export type PhotoBucket = 'design-photos' | 'polish-photos' | 'service-photos';
-
-/**
- * Extrae la ruta del objeto (`<orgId>/designs/<id>.webp`) a partir de la URL
- * pública que se guarda en la BD. Devuelve null si la URL no es de ese bucket.
- */
-export function storagePathFromPublicUrl(bucket: PhotoBucket, url: string): string | null {
-  const marker = `/object/public/${bucket}/`;
-  const idx = url.indexOf(marker);
-  if (idx === -1) return null;
-  return decodeURIComponent(url.slice(idx + marker.length).split('?')[0]);
-}
+export type { PhotoBucket };
 
 /**
  * Subida y borrado de fotos en Supabase Storage.
@@ -25,7 +15,7 @@ export function usePhotoStorage(bucket: PhotoBucket) {
   /** Sube `<orgId>/<storagePath>.webp` y devuelve su URL pública. */
   async function upload(storagePath: string, data: ArrayBuffer): Promise<string> {
     if (!organizationId) throw new Error('No organization');
-    const path = `${organizationId}/${storagePath}.webp`;
+    const path = orgStoragePath(organizationId, storagePath);
 
     const { error } = await supabase.storage
       .from(bucket)

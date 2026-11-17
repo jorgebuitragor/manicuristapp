@@ -45,11 +45,21 @@ Síntesis de `TECH_DEBT.md` más lo encontrado al crear el vault. `TECH_DEBT.md`
 - ~~Vista "todo" de ingresos repetía meses los días 29–31~~ (`setMonth` desbordaba). *2026-11-13*
 - ~~Colores del tema~~: cumpleaños en calendario (rosa claro fijo en modo oscuro), banner de conexión, fondos de modales y sombras → tokens `birthday`, `birthdayMuted`, `dangerStrong`, `warning`, `success`, `backdrop`, `shadow`. *2026-11-13* → [[ui-y-tema]]
 
+### Bug reportado por el usuario (2026-11-17)
+
+- **Mantener presionado un color en la vista muestrario deja la app en blanco y bloqueada.** Causa: el long-press activa el modo mover y `SwatchSection` usaba `movePolish` sin recibirlo → `ReferenceError` al renderizar. Ya corregido en `47f7412` (PR #2); llega al usuario cuando se publique la app. Además se añadió `AppErrorBoundary` para que cualquier error de render futuro muestre "Reintentar" en vez de bloquear la app. Sin test automático: no hay infraestructura para tests de componentes.
+
+### Tests y CI (2026-11-17)
+
+- `pnpm test`: 22 tests con `node:test` en `tests/` sobre `lib/dates`, `lib/appointmentStateMachine`, `lib/i18n` (incluye paridad de claves y `{placeholders}` es/en) y `lib/storagePaths`. Verificado que el test de fechas falla con la implementación UTC antigua.
+- `pnpm typecheck` incluye los tests (`allowImportingTsExtensions`).
+- `.github/workflows/ci.yml`: typecheck + tests con TZ Bogotá y Madrid en cada PR y push a `main`.
+
 ### Mantenibilidad
 
 - Pantallas muy grandes: `app/(tabs)/polishes/index.tsx` (~1300 líneas), `app/appointments/[id].tsx` (~760), `app/(tabs)/calendar.tsx` (~600), `app/(tabs)/settings.tsx` (~570).
 - Campos legacy duplicados: `appointments.service_id` (vs `appointment_services`), `nail_polishes.brand` texto (vs `brand_id`).
-- No hay tests, linter ni CI configurados (`package.json` sin scripts de test/lint).
+- Hay tests de lógica pura y CI (2026-11-17), pero **no hay linter** ni tests de componentes/hooks (habría que añadir Jest + `jest-expo`). Ver abajo.
 
 ## Relacionado
 
