@@ -24,7 +24,8 @@ fuentes:
 ## `usePhotoStorage(bucket)` (`hooks/usePhotoStorage.ts`)
 
 - `upload(storagePath, arrayBuffer)` → sube `<orgId>/<storagePath>.webp` con `upsert` y devuelve la URL pública.
-- `remove(publicUrl)` → saca la ruta de la URL guardada en la BD (`storagePathFromPublicUrl`) y la borra. Borrar a partir de la URL, en vez de reconstruir la ruta, también limpia las fotos subidas con un `tempId`.
+- `remove(publicUrl)` → saca la ruta de la URL guardada en la BD (`storagePathFromPublicUrl`) y la borra.
+- Las funciones puras de rutas (`orgStoragePath`, `storagePathFromPublicUrl`) viven en `lib/storagePaths.ts` y tienen tests. Borrar a partir de la URL, en vez de reconstruir la ruta, también limpia las fotos subidas con un `tempId`.
 
 ## `PhotoPickerField`
 
