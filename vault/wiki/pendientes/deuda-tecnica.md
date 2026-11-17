@@ -45,6 +45,10 @@ Síntesis de `TECH_DEBT.md` más lo encontrado al crear el vault. `TECH_DEBT.md`
 - ~~Vista "todo" de ingresos repetía meses los días 29–31~~ (`setMonth` desbordaba). *2026-11-13*
 - ~~Colores del tema~~: cumpleaños en calendario (rosa claro fijo en modo oscuro), banner de conexión, fondos de modales y sombras → tokens `birthday`, `birthdayMuted`, `dangerStrong`, `warning`, `success`, `backdrop`, `shadow`. *2026-11-13* → [[ui-y-tema]]
 
+### Bug reportado por el usuario (2026-11-17)
+
+- **Mantener presionado un color en la vista muestrario deja la app en blanco y bloqueada.** Causa: el long-press activa el modo mover y `SwatchSection` usaba `movePolish` sin recibirlo → `ReferenceError` al renderizar. Ya corregido en `47f7412` (PR #2); llega al usuario cuando se publique la app. Además se añadió `AppErrorBoundary` para que cualquier error de render futuro muestre "Reintentar" en vez de bloquear la app. Sin test automático: no hay infraestructura para tests de componentes.
+
 ### Tests y CI (2026-11-17)
 
 - `pnpm test`: 22 tests con `node:test` en `tests/` sobre `lib/dates`, `lib/appointmentStateMachine`, `lib/i18n` (incluye paridad de claves y `{placeholders}` es/en) y `lib/storagePaths`. Verificado que el test de fechas falla con la implementación UTC antigua.

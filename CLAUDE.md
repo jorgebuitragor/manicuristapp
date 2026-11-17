@@ -166,6 +166,7 @@ warning · success · backdrop · birthday · birthdayMuted
 | `IncomeConfirmModal` | Confirmar ingreso al completar una cita |
 | `CalendarNotesPad` | Notas y dibujo por día en el calendario |
 | `Toast` · `OfflineBanner` · `SplashAnimation` · `TabletQuickActionFab` | Infraestructura de UI |
+| `AppErrorBoundary` | Pantalla "Algo salió mal / Reintentar" ante errores de render (exportada como `ErrorBoundary` en `app/_layout.tsx`). Funciona sin providers |
 
 ### Lo que NO va en una pantalla
 

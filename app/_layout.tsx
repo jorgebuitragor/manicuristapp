@@ -28,6 +28,9 @@ import { ToastRenderer } from '@/components/ui/Toast';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { isNotificationsSupported, setupNotifications, requestNotificationPermissions } from '@/lib/notifications';
 
+// Un error al renderizar muestra una pantalla con "Reintentar" en vez de dejar la app en blanco.
+export { AppErrorBoundary as ErrorBoundary } from '@/components/ui/AppErrorBoundary';
+
 function AuthGuard({ session, isLoading }: { session: Session | null; isLoading: boolean }) {
   const segments = useSegments();
   const router = useRouter();

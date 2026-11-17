@@ -68,6 +68,10 @@ PersistQueryClientProvider
 
 Contextos de UI transversales: `useToast()`, `useConfirm()` (diálogo de confirmación), `useError()` (diálogo de error).
 
+## Errores de render
+
+`app/_layout.tsx` exporta `ErrorBoundary` (= `components/ui/AppErrorBoundary.tsx`): si una pantalla lanza un error al renderizar, se muestra "Algo salió mal / Reintentar" en lugar de dejar la app en blanco y bloqueada (que es lo que pasa en builds de producción sin boundary). Como envuelve el layout raíz, se muestra fuera de los providers: usa `lib/theme` según el esquema del sistema y `translate()`.
+
 ## Arranque
 
 `SplashScreen.preventAutoHideAsync()` → se oculta el splash nativo → `SplashAnimation` propia se muestra hasta que termina la animación **y** cargan sesión y org. También se configuran notificaciones y permisos ([[notificaciones]]).
